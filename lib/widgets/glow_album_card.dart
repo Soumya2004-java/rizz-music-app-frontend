@@ -1,26 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:rizzmusicapp/views/album_views/arijit_singh.dart';
 
 class GlowAlbumCard extends StatelessWidget {
   final String image;
   final String title;
   final VoidCallback? onTap;
+  final EdgeInsetsGeometry margin;
 
   const GlowAlbumCard({
     super.key,
     required this.image,
     required this.title,
     this.onTap,
+    this.margin = const EdgeInsets.only(right: 16),
   });
 
   @override
   Widget build(BuildContext context) {
+    final imageSizePx = (160 * MediaQuery.devicePixelRatioOf(context)).round();
+
     return GestureDetector(
-onTap: onTap,
+      onTap: onTap,
       child: Container(
         width: 155,
-        margin: const EdgeInsets.only(right: 16),
+        margin: margin,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -32,13 +34,13 @@ onTap: onTap,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.pink.withOpacity(0.28),
+                    color: Colors.pink.withValues(alpha: 0.28),
                     blurRadius: 24,
                     spreadRadius: 2,
                     offset: const Offset(0, 8),
                   ),
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.25),
+                    color: Colors.black.withValues(alpha: 0.25),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -49,6 +51,8 @@ onTap: onTap,
                 child: Image.asset(
                   image,
                   fit: BoxFit.cover,
+                  cacheWidth: imageSizePx,
+                  filterQuality: FilterQuality.low,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
                       color: Colors.grey.shade300,

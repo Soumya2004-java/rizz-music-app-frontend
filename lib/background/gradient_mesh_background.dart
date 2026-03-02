@@ -1,4 +1,5 @@
-import 'package:flutter/cupertino.dart';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 class GradientMeshBackground extends StatelessWidget {
@@ -6,36 +7,65 @@ class GradientMeshBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return const RepaintBoundary(child: _GradientMeshLayer());
+  }
+}
+
+class _GradientMeshLayer extends StatelessWidget {
+  const _GradientMeshLayer();
+
+  @override
+  Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Base dark layer
-        Container(
-          color: const Color(0xFF0B0B14),
+        Container(color: const Color(0xFF090E1A)),
+        // Blur only the mesh blobs instead of the full backdrop layer.
+        Positioned.fill(
+          child: ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+            child: Stack(
+              children: [
+                _meshBlob(
+                  color: const Color(0xFF2B6BFF),
+                  top: -130,
+                  left: -110,
+                  size: 340,
+                ),
+                _meshBlob(
+                  color: const Color(0xFFFF7A59),
+                  top: 70,
+                  right: -120,
+                  size: 310,
+                ),
+                _meshBlob(
+                  color: const Color(0xFF12B886),
+                  bottom: -150,
+                  left: 40,
+                  size: 360,
+                ),
+                _meshBlob(
+                  color: const Color(0xFFFFB347),
+                  bottom: 110,
+                  right: -90,
+                  size: 280,
+                ),
+              ],
+            ),
+          ),
         ),
-
-        _meshBlob(
-          color: Colors.purpleAccent,
-          top: -120,
-          left: -100,
-          size: 320,
-        ),
-        _meshBlob(
-          color: Colors.orangeAccent,
-          top: 80,
-          right: -120,
-          size: 300,
-        ),
-        _meshBlob(
-          color: Colors.pinkAccent,
-          bottom: -140,
-          left: 60,
-          size: 340,
-        ),
-        _meshBlob(
-          color: Colors.blueAccent,
-          bottom: 120,
-          right: -100,
-          size: 280,
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.16),
+                  Colors.black.withValues(alpha: 0.40),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -61,8 +91,8 @@ class GradientMeshBackground extends StatelessWidget {
           shape: BoxShape.circle,
           gradient: RadialGradient(
             colors: [
-              color.withOpacity(0.55),
-              color.withOpacity(0.05),
+              color.withValues(alpha: 0.52),
+              color.withValues(alpha: 0.04),
             ],
           ),
         ),

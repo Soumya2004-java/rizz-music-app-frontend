@@ -15,6 +15,8 @@ class FloatingPillGlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageSizePx = (44 * MediaQuery.devicePixelRatioOf(context)).round();
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -25,7 +27,7 @@ class FloatingPillGlassCard extends StatelessWidget {
           // 🌫️ soft floating shadow
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.25),
+              color: Colors.black.withValues(alpha: 0.25),
               blurRadius: 18,
               offset: const Offset(0, 10),
             ),
@@ -42,11 +44,11 @@ class FloatingPillGlassCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(50),
 
                 // 🧊 glass base
-                color: Colors.white.withOpacity(0.16),
+                color: Colors.white.withValues(alpha: 0.16),
 
                 // subtle highlight
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.35),
+                  color: Colors.white.withValues(alpha: 0.35),
                   width: 1,
                 ),
               ),
@@ -61,6 +63,8 @@ class FloatingPillGlassCard extends StatelessWidget {
                       width: 44,
                       height: 44,
                       fit: BoxFit.cover,
+                      cacheWidth: imageSizePx,
+                      filterQuality: FilterQuality.low,
                     ),
                   ),
 

@@ -1,6 +1,9 @@
-import 'dart:math';
 import 'dart:ui';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
+import '../background/gradient_mesh_background.dart';
 
 class SignInOrSignUp extends StatefulWidget {
   const SignInOrSignUp({super.key});
@@ -10,41 +13,34 @@ class SignInOrSignUp extends StatefulWidget {
 }
 
 class _SignInOrSignUpState extends State<SignInOrSignUp>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> fadeIn;
-  late Animation<Offset> slideUp;
-  late Animation<double> scaleIn;
+    with TickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final AnimationController _floralController;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _rise;
 
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 900),
       vsync: this,
     );
-
-    fadeIn = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(curve: Curves.easeIn, parent: _controller));
-
-    slideUp = Tween<Offset>(
-      begin: const Offset(0, 0.2),
+    _floralController = AnimationController(
+      duration: const Duration(seconds: 8),
+      vsync: this,
+    )..repeat();
+    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    _rise = Tween<Offset>(
+      begin: const Offset(0, 0.25),
       end: Offset.zero,
-    ).animate(CurvedAnimation(curve: Curves.easeOut, parent: _controller));
-
-    scaleIn = Tween<double>(
-      begin: 0.8,
-      end: 1,
-    ).animate(CurvedAnimation(curve: Curves.elasticOut, parent: _controller));
-
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
   }
 
   @override
   void dispose() {
+    _floralController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -52,362 +48,273 @@ class _SignInOrSignUpState extends State<SignInOrSignUp>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FadeTransition(
-        opacity: fadeIn,
-        child: Stack(
-          children: [
-            // ⭐ BACKGROUND GRADIENT
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  colors: [
-                    Colors.purple.shade900,
-                    Colors.yellow.shade900,
-                    Colors.red.shade200
-                  ],
-                ),
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          const GradientMeshBackground(),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _floralController,
+                builder: (_, __) {
+                  final t = _floralController.value;
+                  return Stack(
+                    children: [
+                      _floralBloom(
+                        alignment: const Alignment(0.86, -0.72),
+                        size: 170,
+                        color: const Color(0x39FFB38A),
+                        progress: t,
+                        phase: 0.0,
+                      ),
+                      _floralBloom(
+                        alignment: const Alignment(-0.8, -0.42),
+                        size: 132,
+                        color: const Color(0x309BC2FF),
+                        progress: t,
+                        phase: 1.4,
+                      ),
+                      _floralBloom(
+                        alignment: const Alignment(0.9, 0.12),
+                        size: 150,
+                        color: const Color(0x2E95A5FF),
+                        progress: t,
+                        phase: 2.2,
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
-
-            // ⭐ FLOATING BLOBS ANIMATION
-            const Positioned(
-              right: 0,
-              top: 50,
-              bottom: 0,
-              child: FloatingBlobs(),
-            ),
-
-            // ⭐ FLORAL DESIGN LAYER
-            const Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              child: FloralDesign(),
-            ),
-
-            // ⭐ LOGO + TEXT
-            Padding(
-              padding: const EdgeInsets.only(left: 35, top: 150),
+          ),
+          Positioned(
+            top: 90,
+            left: -20,
+            child: _glowOrb(180, const Color(0x446885FF)),
+          ),
+          Positioned(
+            bottom: 120,
+            right: -30,
+            child: _glowOrb(240, const Color(0x55FFA16A)),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SlideTransition(
-                    position: slideUp,
-                    child: const Text(
-                      "Welcome",
-                      style: TextStyle(
-                        fontSize: 52,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                  const Text(
+                    'Welcome',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 44,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -1,
                     ),
                   ),
-
-                  const SizedBox(height: 10),
-
-                  SlideTransition(
-                    position: slideUp,
-                    child: const Text(
-                      '"Rizz your soul with music"',
-                      style: TextStyle(fontSize: 25, color: Colors.white70),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Rizz your soul with music',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.76),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ],
-              ),
-            ),
-
-            // ⭐ WHITE CONTAINER WITH BUTTONS
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: SlideTransition(
-                position: slideUp,   // 🔥 YAHI MAIN LINE HAI
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(60),
-                    topRight: Radius.circular(60),
-                  ),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      height: 430,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.18),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(60),
-                          topRight: Radius.circular(60),
-                        ),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.4),
-                          width: 1.6,
-                        ),
-                      ),
-
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 35),
+                  const Spacer(),
+                  FadeTransition(
+                    opacity: _fade,
+                    child: SlideTransition(
+                      position: _rise,
+                      child: _glassCard(
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            const SizedBox(height: 10),
-
                             Image.asset(
-                              "assets/images/PlaygroundImage-removebg-preview.png",
-                              width: 150,
-
+                              'assets/images/PlaygroundImage-removebg-preview.png',
+                              width: 130,
                             ),
-
-                            const SizedBox(height: 15),
-
-                            const Text(
-                              "MAKE YOUR CHOICE",
+                            const SizedBox(height: 10),
+                            Text(
+                              'MAKE YOUR CHOICE',
                               style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                                color: Colors.white.withValues(alpha: 0.92),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
                               ),
                             ),
-
                             const SizedBox(height: 20),
-
-                            GlowingButton(
-                              text: "Login",
-                              color: Colors.orange.shade900,
-                              glowColor: Colors.orangeAccent,
-                              onTap: () {
-                                Navigator.pushNamed(context, '/login');
-                              },
+                            _actionButton(
+                              text: 'Login',
+                              colors: const [
+                                Color(0xFFFFA75B),
+                                Color(0xFFFF6E5F),
+                              ],
+                              onTap: () =>
+                                  Navigator.pushNamed(context, '/login'),
                             ),
-
-                            const SizedBox(height: 25),
-
-                            GlowingButton(
-                              text: "Register",
-                              color: Colors.purple.shade900,
-                              glowColor: Colors.pinkAccent,
-                              onTap: () {
-                                Navigator.pushNamed(context, '/signup');
-                              },
+                            const SizedBox(height: 14),
+                            _actionButton(
+                              text: 'Register',
+                              colors: const [
+                                Color(0xFF8CA2FF),
+                                Color(0xFF6361FF),
+                              ],
+                              onTap: () =>
+                                  Navigator.pushNamed(context, '/signup'),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'Start listening in seconds',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.75),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _glassCard({required Widget child}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(30),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(30),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF88A7FF).withValues(alpha: 0.26),
+                const Color(0xFFFF8A74).withValues(alpha: 0.12),
+              ],
+            ),
+            border: Border.all(
+              color: const Color(0xFF9FB4FF).withValues(alpha: 0.38),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.22),
+                blurRadius: 20,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: child,
         ),
       ),
     );
   }
-}
 
-
-class FloralDesign extends StatelessWidget {
-  const FloralDesign({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: FloralPainter(),
-      child: const SizedBox(width: 200),
-    );
-  }
-}
-
-class FloralPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-
-    paint.color = Colors.purple.shade900.withOpacity(0.4);
-    canvas.drawCircle(Offset(size.width * .4, size.height * .2), 90, paint);
-
-    paint.color = Colors.orange.shade800.withOpacity(0.4);
-    canvas.drawCircle(Offset(size.width * .25, size.height * .45), 110, paint);
-
-    paint.color = Colors.pink.shade400.withOpacity(0.4);
-    canvas.drawCircle(Offset(size.width * .45, size.height * .7), 100, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class FloatingBlobs extends StatefulWidget {
-  const FloatingBlobs({super.key});
-
-  @override
-  State<FloatingBlobs> createState() => _FloatingBlobsState();
-}
-
-class _FloatingBlobsState extends State<FloatingBlobs>
-    with SingleTickerProviderStateMixin {
-  late AnimationController controller;
-
-  @override
-  void initState() {
-    super.initState();
-
-    controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 6),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, child) {
-        return CustomPaint(
-          painter: BlobsPainter(controller.value),
-          child: const SizedBox(width: 180, height: double.infinity),
-        );
-      },
-    );
-  }
-}
-
-class BlobsPainter extends CustomPainter {
-  final double t;
-
-  BlobsPainter(this.t);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint();
-
-    paint.color = Colors.orange.withOpacity(0.25);
-    canvas.drawCircle(
-      Offset(
-        size.width * (0.5 + 0.1 * sin(t * 2 * pi)),
-        size.height * (0.3 + 0.1 * cos(t * 2 * pi)),
-      ),
-      80,
-      paint,
-    );
-
-    paint.color = Colors.pink.withOpacity(0.25);
-    canvas.drawCircle(
-      Offset(
-        size.width * (0.3 + 0.1 * cos(t * 2 * pi)),
-        size.height * (0.6 + 0.1 * sin(t * 2 * pi)),
-      ),
-      70,
-      paint,
-    );
-
-    paint.color = Colors.purple.withOpacity(0.25);
-    canvas.drawCircle(
-      Offset(
-        size.width * (0.4 + 0.1 * sin(t * 2 * pi)),
-        size.height * (0.8 + 0.1 * cos(t * 2 * pi)),
-      ),
-      90,
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
-class GlowingButton extends StatefulWidget {
-  final String text;
-  final Color color;
-  final Color glowColor;
-  final VoidCallback onTap;
-
-  const GlowingButton({
-    super.key,
-    required this.text,
-    required this.color,
-    required this.glowColor,
-    required this.onTap,
-  });
-
-  @override
-  State<GlowingButton> createState() => _GlowingButtonState();
-}
-
-class _GlowingButtonState extends State<GlowingButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> scale;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 150),
-    );
-
-    scale = Tween<double>(
-      begin: 1.0,
-      end: 0.94,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _pressDown() => _controller.forward();
-
-  void _pressUp() {
-    _controller.reverse();
-    widget.onTap();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _actionButton({
+    required String text,
+    required List<Color> colors,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
-      onTapDown: (_) => _pressDown(),
-      onTapUp: (_) => _pressUp(),
-      onTapCancel: () => _controller.reverse(),
+      onTap: onTap,
+      child: Container(
+        height: 54,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(colors: colors),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.34)),
+          boxShadow: [
+            BoxShadow(
+              color: colors.last.withValues(alpha: 0.45),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-      child: ScaleTransition(
-        scale: scale,
-        child: Container(
-          height: 60,
-          decoration: BoxDecoration(
-            color: widget.color,
-            borderRadius: BorderRadius.circular(40),
-            boxShadow: [
-              BoxShadow(
-                color: widget.glowColor.withOpacity(0.7),
-                blurRadius: 25,
-                spreadRadius: 2,
-              ),
-              const BoxShadow(
-                color: Colors.black26,
-                blurRadius: 20,
-                offset: Offset(0, 12),
+  Widget _glowOrb(double size, Color color) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
+        ),
+      ),
+    );
+  }
+
+  Widget _floralBloom({
+    required Alignment alignment,
+    required double size,
+    required Color color,
+    required double progress,
+    required double phase,
+  }) {
+    final wave = math.sin((progress * 2 * math.pi) + phase);
+    return Align(
+      alignment: alignment,
+      child: Transform.translate(
+        offset: Offset(0, wave * 12),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              for (int i = 0; i < 5; i++)
+                Transform.rotate(
+                  angle: (i * (2 * math.pi / 5)) + (wave * 0.1),
+                  child: Transform.translate(
+                    offset: Offset(0, -size * 0.22),
+                    child: Container(
+                      width: size * 0.34,
+                      height: size * 0.5,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(size),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [color, color.withValues(alpha: 0)],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              Container(
+                width: size * 0.18,
+                height: size * 0.18,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color.withValues(alpha: 0.75),
+                ),
               ),
             ],
-          ),
-
-          child: Center(
-            child: Text(
-              widget.text,
-              style: const TextStyle(
-                fontSize: 22,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
           ),
         ),
       ),
