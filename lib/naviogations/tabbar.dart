@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
+import '../services/app_navigator.dart';
+import '../services/tabbar_visibility.dart';
 import '../views/home.dart';
 import '../views/library pages/library.dart';
 import '../views/profile/profile.dart';
@@ -13,7 +15,7 @@ class Tabbars extends StatefulWidget {
   State<Tabbars> createState() => _TabbarsState();
 }
 
-class _TabbarsState extends State<Tabbars> {
+class _TabbarsState extends State<Tabbars> with RouteAware {
   int _currentIndex = 0;
   int _searchTabTapCount = 0;
   bool _isTabAnimating = false;
@@ -30,12 +32,45 @@ class _TabbarsState extends State<Tabbars> {
       const LibraryPage(),
       const ProfilePage(),
     ];
+    tabBarVisibleNotifier.value = true;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      appRouteObserver.subscribe(this, route);
+      tabBarVisibleNotifier.value = route.isCurrent;
+    }
   }
 
   @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
+    tabBarVisibleNotifier.value = false;
     _pageController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didPush() {
+    tabBarVisibleNotifier.value = true;
+  }
+
+  @override
+  void didPopNext() {
+    tabBarVisibleNotifier.value = true;
+  }
+
+  @override
+  void didPushNext() {
+    tabBarVisibleNotifier.value = false;
+  }
+
+  @override
+  void didPop() {
+    tabBarVisibleNotifier.value = false;
   }
 
   @override
@@ -62,24 +97,63 @@ class _TabbarsState extends State<Tabbars> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(40),
+          borderRadius: BorderRadius.circular(34),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+            filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
             child: Container(
-              height: 72,
+              height: 68,
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(40),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                borderRadius: BorderRadius.circular(34),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.28),
+                    const Color(0xFFB8D3F0).withValues(alpha: 0.18),
+                    const Color(0xFF9DB5D6).withValues(alpha: 0.14),
+                  ],
+                ),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.36),
+                  width: 1.1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 22,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+              child: Stack(
                 children: [
-                  _navItem(Icons.home, 0, itemWidth),
-                  _navItem(Icons.search, 1, itemWidth),
-                  _navItem(Icons.library_music, 2, itemWidth),
-                  _navItem(Icons.person, 3, itemWidth),
+                  Positioned(
+                    top: -30,
+                    right: -12,
+                    child: Container(
+                      width: 120,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(999),
+                        gradient: RadialGradient(
+                          colors: [
+                            Colors.white.withValues(alpha: 0.34),
+                            Colors.white.withValues(alpha: 0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _navItem(Icons.home, 0, itemWidth),
+                      _navItem(Icons.search, 1, itemWidth),
+                      _navItem(Icons.library_music, 2, itemWidth),
+                      _navItem(Icons.person, 3, itemWidth),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -129,19 +203,22 @@ class _TabbarsState extends State<Tabbars> {
             duration: const Duration(milliseconds: 180),
             curve: Curves.easeOut,
             width: itemWidth,
-            height: 54,
+            height: 52,
             decoration: BoxDecoration(
               color: isSelected
-                  ? Colors.white.withValues(alpha: 0.25)
+                  ? Colors.white.withValues(alpha: 0.38)
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(40),
+              borderRadius: BorderRadius.circular(999),
+              border: isSelected
+                  ? Border.all(color: Colors.white.withValues(alpha: 0.42))
+                  : null,
             ),
             child: Icon(
               icon,
-              size: 26,
+              size: 24,
               color: isSelected
-                  ? Colors.black87
-                  : Colors.white.withValues(alpha: 0.7),
+                  ? const Color(0xFF10151D)
+                  : Colors.white.withValues(alpha: 0.85),
             ),
           ),
         ),

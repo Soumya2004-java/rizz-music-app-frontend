@@ -76,11 +76,7 @@ class AlbumPage extends StatelessWidget {
               ),
             ),
             const Center(
-              child: Icon(
-                Icons.album_rounded,
-                size: 64,
-                color: Colors.white,
-              ),
+              child: Icon(Icons.album_rounded, size: 64, color: Colors.white),
             ),
           ],
         ),
@@ -122,7 +118,15 @@ class AlbumPage extends StatelessWidget {
     );
   }
 
-  Widget _songTile(BuildContext context, Song song, int index) {
+  Widget _songTile(
+    BuildContext context,
+    Song song,
+    int index,
+    List<Song> songs,
+  ) {
+    final imageUrl = song.imageUrl?.trim() ?? '';
+    final hasImage = imageUrl.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       child: ClipRRect(
@@ -133,18 +137,25 @@ class AlbumPage extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
-                PlayerSession.instance.playSong(song);
+                final session = PlayerSession.instance;
+                session.setQueue(songs, currentSong: song);
+                session.playSong(song);
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => PlayerScreen(song: song)),
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 11,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.14),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -164,20 +175,27 @@ class AlbumPage extends StatelessWidget {
                       height: 46,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xff7ec6ff),
-                            Color(0xffa88cff),
-                          ],
-                        ),
+                        image: hasImage
+                            ? DecorationImage(
+                                image: NetworkImage(imageUrl),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                        gradient: hasImage
+                            ? null
+                            : const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xff7ec6ff), Color(0xffa88cff)],
+                              ),
                       ),
-                      child: const Icon(
-                        Icons.music_note_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                      child: hasImage
+                          ? null
+                          : const Icon(
+                              Icons.music_note_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -221,9 +239,14 @@ class AlbumPage extends StatelessWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, AsyncSnapshot<List<Song>> snapshot) {
+  Widget _buildContent(
+    BuildContext context,
+    AsyncSnapshot<List<Song>> snapshot,
+  ) {
     if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Center(child: CircularProgressIndicator(color: Colors.white));
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
     }
 
     if (snapshot.hasError) {
@@ -258,7 +281,10 @@ class AlbumPage extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
           ),
           flexibleSpace: FlexibleSpaceBar(
-            titlePadding: const EdgeInsetsDirectional.only(start: 18, bottom: 12),
+            titlePadding: const EdgeInsetsDirectional.only(
+              start: 18,
+              bottom: 12,
+            ),
             title: Text(
               albumLabel,
               maxLines: 1,
@@ -288,10 +314,7 @@ class AlbumPage extends StatelessWidget {
                     child: const SizedBox.expand(),
                   ),
                 ),
-                Align(
-                  alignment: const Alignment(0, 0.72),
-                  child: _heroCover(),
-                ),
+                Align(alignment: const Alignment(0, 0.72), child: _heroCover()),
               ],
             ),
           ),
@@ -351,11 +374,16 @@ class AlbumPage extends StatelessWidget {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 22,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.14),
+                      ),
                     ),
                     child: const Text(
                       'No songs found for this album.',
@@ -369,7 +397,8 @@ class AlbumPage extends StatelessWidget {
         else
           SliverList(
             delegate: SliverChildBuilderDelegate(
-              (context, index) => _songTile(context, songs[index], index),
+              (context, index) =>
+                  _songTile(context, songs[index], index, songs),
               childCount: songs.length,
             ),
           ),

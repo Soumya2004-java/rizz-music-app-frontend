@@ -386,7 +386,7 @@ class _SignUpPageState extends State<SignUpPage>
     }
 
     setState(() => _isSubmitting = true);
-    final error = AuthStore.signUp(
+    final error = await AuthStore.signUp(
       name: name,
       email: email,
       password: password,

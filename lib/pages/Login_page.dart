@@ -349,7 +349,7 @@ class _LoginPageState extends State<LoginPage>
     }
 
     setState(() => _isLoggingIn = true);
-    final error = AuthStore.signIn(email: email, password: password);
+    final error = await AuthStore.signIn(email: email, password: password);
     setState(() => _isLoggingIn = false);
 
     if (!mounted) return;

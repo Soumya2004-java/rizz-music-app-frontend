@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:rizzmusicapp/songs/albums/album_page.dart';
+import 'package:rizzmusicapp/views/library%20pages/Albums/albums_page.dart';
 import 'package:rizzmusicapp/views/library%20pages/Artsts/artists_page.dart';
 import 'package:rizzmusicapp/views/library%20pages/Playlists/playlist_page.dart';
 import 'package:rizzmusicapp/views/library%20pages/songs/songs_page.dart';
@@ -171,7 +171,7 @@ class LibraryPage extends StatelessWidget {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => AlbumPage(artist: ''),
+                                    builder: (_) => const AlbumsPage(),
                                   ),
                                 );
                               },

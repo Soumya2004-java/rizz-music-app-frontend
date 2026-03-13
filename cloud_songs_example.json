@@ -1,0 +1,20 @@
+[
+  {
+    "id": "song_001",
+    "title": "Neon Nights",
+    "artist": "Rizz Originals",
+    "album": "Cloud Sessions",
+    "audioUrl": "https://storage.googleapis.com/YOUR_BUCKET/music/neon-nights.mp3",
+    "imageUrl": "https://storage.googleapis.com/YOUR_BUCKET/covers/neon-nights.jpg",
+    "durationSeconds": 207
+  },
+  {
+    "id": "song_002",
+    "title": "Morning Drive",
+    "artist": "Rizz Originals",
+    "album": "Cloud Sessions",
+    "audioUrl": "https://storage.googleapis.com/YOUR_BUCKET/music/morning-drive.mp3",
+    "imageUrl": "https://storage.googleapis.com/YOUR_BUCKET/covers/morning-drive.jpg",
+    "durationSeconds": 188
+  }
+]

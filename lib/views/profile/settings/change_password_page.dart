@@ -186,7 +186,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     }
 
     setState(() => _loading = true);
-    final error = AuthStore.changePassword(
+    final error = await AuthStore.changePassword(
       currentPassword: current,
       newPassword: next,
     );

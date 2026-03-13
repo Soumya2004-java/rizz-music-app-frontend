@@ -3,11 +3,21 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../background/gradient_mesh_background.dart';
+import '../../views/player/player_scrreen.dart';
+import '../../views/player/player_session.dart';
 import '../songs.dart';
 import '../songs_api.dart';
 
 class SongListPage extends StatelessWidget {
   const SongListPage({super.key});
+
+  ImageProvider<Object> _songArtwork(String? imageUrl) {
+    final normalized = imageUrl?.trim() ?? '';
+    if (normalized.isNotEmpty) return NetworkImage(normalized);
+    return const AssetImage(
+      'assets/albums/ab67616d0000b273627b5b17cb48f6e6956b842e.jpeg',
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +86,28 @@ class SongListPage extends StatelessWidget {
                                   ),
                                   child: ListTile(
                                     contentPadding: EdgeInsets.zero,
+                                    onTap: () {
+                                      final session = PlayerSession.instance;
+                                      session.setQueue(songs, currentSong: song);
+                                      session.playSong(song);
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              PlayerScreen(song: song),
+                                        ),
+                                      );
+                                    },
+                                    leading: Container(
+                                      width: 46,
+                                      height: 46,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        image: DecorationImage(
+                                          image: _songArtwork(song.imageUrl),
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
                                     title: Text(
                                       song.title,
                                       style: const TextStyle(
