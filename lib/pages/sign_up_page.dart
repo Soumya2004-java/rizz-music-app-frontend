@@ -52,9 +52,9 @@ class _SignUpPageState extends State<SignUpPage>
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     return Scaffold(
       backgroundColor: Colors.transparent,
-      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           const GradientMeshBackground(),
@@ -69,157 +69,176 @@ class _SignUpPageState extends State<SignUpPage>
             child: _glowOrb(230, const Color(0x55FF9F6A)),
           ),
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: FadeTransition(
-                opacity: _fade,
-                child: SlideTransition(
-                  position: _rise,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Create Account',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 34,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.8,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Join Rizz Music and build your own vibe',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.75),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      _glassCard(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomInset),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: FadeTransition(
+                      opacity: _fade,
+                      child: SlideTransition(
+                        position: _rise,
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 46,
-                                  height: 46,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(14),
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFF7C9BFF),
-                                        Color(0xFF5A5DFF),
-                                      ],
-                                    ),
+                            const Text(
+                              'Create Account',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 34,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Join Rizz Music and build your own vibe',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.75),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            _glassCard(
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 46,
+                                        height: 46,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                          gradient: const LinearGradient(
+                                            colors: [
+                                              Color(0xFF7C9BFF),
+                                              Color(0xFF5A5DFF),
+                                            ],
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.person_add_alt_1_rounded,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Expanded(
+                                        child: Text(
+                                          'Rizz Sign Up',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 18,
+                                          ),
+                                        ),
+                                      ),
+                                      _pill('New'),
+                                    ],
                                   ),
-                                  child: const Icon(
-                                    Icons.person_add_alt_1_rounded,
-                                    color: Colors.white,
+                                  const SizedBox(height: 20),
+                                  _input(
+                                    icon: Icons.person_outline_rounded,
+                                    hint: 'Full name',
+                                    controller: _nameController,
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Expanded(
-                                  child: Text(
-                                    'Rizz Sign Up',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 18,
-                                    ),
+                                  const SizedBox(height: 12),
+                                  _input(
+                                    icon: Icons.alternate_email_rounded,
+                                    hint: 'Email address',
+                                    controller: _emailController,
                                   ),
-                                ),
-                                _pill('New'),
-                              ],
+                                  const SizedBox(height: 12),
+                                  _input(
+                                    icon: Icons.lock_outline_rounded,
+                                    hint: 'Password',
+                                    obscure: true,
+                                    controller: _passwordController,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _input(
+                                    icon: Icons.lock_reset_rounded,
+                                    hint: 'Confirm password',
+                                    obscure: true,
+                                    controller: _confirmController,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.check_circle_rounded,
+                                        color: Colors.white.withValues(
+                                          alpha: 0.85,
+                                        ),
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'By continuing, you agree to Terms & Privacy.',
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.78,
+                                            ),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 18),
+                                  _signupButton(),
+                                ],
+                              ),
                             ),
-                            const SizedBox(height: 20),
-                            _input(
-                              icon: Icons.person_outline_rounded,
-                              hint: 'Full name',
-                              controller: _nameController,
-                            ),
-                            const SizedBox(height: 12),
-                            _input(
-                              icon: Icons.alternate_email_rounded,
-                              hint: 'Email address',
-                              controller: _emailController,
-                            ),
-                            const SizedBox(height: 12),
-                            _input(
-                              icon: Icons.lock_outline_rounded,
-                              hint: 'Password',
-                              obscure: true,
-                              controller: _passwordController,
-                            ),
-                            const SizedBox(height: 12),
-                            _input(
-                              icon: Icons.lock_reset_rounded,
-                              hint: 'Confirm password',
-                              obscure: true,
-                              controller: _confirmController,
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.check_circle_rounded,
-                                  color: Colors.white.withValues(alpha: 0.85),
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'By continuing, you agree to Terms & Privacy.',
+                            const SizedBox(height: 18),
+                            Center(
+                              child: Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Text(
+                                    'Already have an account? ',
                                     style: TextStyle(
                                       color: Colors.white.withValues(
-                                        alpha: 0.78,
+                                        alpha: 0.82,
                                       ),
-                                      fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 18),
-                            _signupButton(),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Center(
-                        child: Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              'Already have an account? ',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.82),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => Navigator.pushReplacementNamed(
-                                context,
-                                '/login',
-                              ),
-                              child: Text(
-                                'Login',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.92),
-                                  fontWeight: FontWeight.w700,
-                                  decoration: TextDecoration.underline,
-                                ),
+                                  GestureDetector(
+                                    onTap: () => Navigator.pushReplacementNamed(
+                                      context,
+                                      '/login',
+                                    ),
+                                    child: Text(
+                                      'Login',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.92,
+                                        ),
+                                        fontWeight: FontWeight.w700,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ],

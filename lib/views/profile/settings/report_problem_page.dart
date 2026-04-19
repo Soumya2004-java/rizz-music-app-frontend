@@ -1,9 +1,7 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
-import '../../../background/gradient_mesh_background.dart'
-    show GradientMeshBackground;
+import '../../../background/gradient_mesh_background.dart';
+import 'settings_store.dart';
 
 class ReportProblemPage extends StatefulWidget {
   const ReportProblemPage({super.key});
@@ -13,8 +11,29 @@ class ReportProblemPage extends StatefulWidget {
 }
 
 class _ReportProblemPageState extends State<ReportProblemPage> {
-  final _messageController = TextEditingController();
-  String _type = 'Bug';
+  final TextEditingController _messageController = TextEditingController();
+  List<String> _types = const ['Bug', 'Playback', 'Account', 'Other'];
+  String _selectedType = 'Bug';
+  bool _loading = true;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final config = await SettingsStore.fetchAppConfig();
+    if (!mounted) return;
+    setState(() {
+      _types = config.reportProblemTypes;
+      if (!_types.contains(_selectedType) && _types.isNotEmpty) {
+        _selectedType = _types.first;
+      }
+      _loading = false;
+    });
+  }
 
   @override
   void dispose() {
@@ -24,8 +43,6 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
 
   @override
   Widget build(BuildContext context) {
-    final top = MediaQuery.of(context).padding.top + 8;
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -45,90 +62,67 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
               ),
             ),
           ),
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: const SizedBox.expand(),
-            ),
-          ),
-          ListView(
-            padding: EdgeInsets.fromLTRB(20, top, 20, 16),
-            children: [
-              Row(
-                children: [
-                  _CircleGlassButton(
-                    icon: Icons.arrow_back_rounded,
-                    onTap: () => Navigator.of(context).pop(),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
+          if (_loading)
+            const Center(child: CircularProgressIndicator())
+          else
+            ListView(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                MediaQuery.of(context).padding.top + 10,
+                16,
+                20,
+              ),
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const Text(
                       'Report a Problem',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 28,
+                        fontSize: 24,
                         fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              _SectionCard(
-                child: Column(
-                  children: [
-                    DropdownButtonFormField<String>(
-                      initialValue: _type,
-                      decoration: _decoration('Problem Type'),
-                      dropdownColor: const Color(0xFF121722),
-                      style: const TextStyle(color: Colors.white),
-                      items: const ['Bug', 'Playback', 'Account', 'Other']
-                          .map(
-                            (item) => DropdownMenuItem(
-                              value: item,
-                              child: Text(item),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) setState(() => _type = value);
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _messageController,
-                      minLines: 5,
-                      maxLines: 7,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _decoration('Describe the issue'),
-                    ),
-                    const SizedBox(height: 14),
-                    GestureDetector(
-                      onTap: _submit,
-                      child: Container(
-                        height: 50,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF89A6FF), Color(0xFF5D56FF)],
-                          ),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Submit Report',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedType,
+                  dropdownColor: const Color(0xFF1D2331),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _decoration('Problem Type'),
+                  items: _types
+                      .map(
+                        (item) =>
+                            DropdownMenuItem(value: item, child: Text(item)),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) setState(() => _selectedType = value);
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _messageController,
+                  minLines: 5,
+                  maxLines: 7,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _decoration('Describe the issue'),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: _submitting ? null : _submit,
+                  child: Text(_submitting ? 'Submitting...' : 'Submit Report'),
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -141,83 +135,42 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
       filled: true,
       fillColor: Colors.white.withValues(alpha: 0.10),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.42)),
       ),
     );
   }
 
-  void _submit() {
-    if (_messageController.text.trim().isEmpty) {
+  Future<void> _submit() async {
+    final message = _messageController.text.trim();
+    if (message.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please describe the issue.')),
       );
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Report submitted for $_type. Thanks!')),
-    );
-    Navigator.of(context).pop();
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withValues(alpha: 0.18),
-                Colors.white.withValues(alpha: 0.08),
-              ],
-            ),
-          ),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
-
-class _CircleGlassButton extends StatelessWidget {
-  const _CircleGlassButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 42,
-        width: 42,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-        ),
-        child: Icon(icon, color: Colors.white, size: 22),
-      ),
-    );
+    setState(() => _submitting = true);
+    try {
+      await SettingsStore.submitProblem(type: _selectedType, message: message);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Report submitted. Thanks!')),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to submit report: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
   }
 }

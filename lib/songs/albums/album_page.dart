@@ -10,13 +10,27 @@ import '../songs_api.dart';
 
 class AlbumPage extends StatelessWidget {
   final String artist;
+  final String? albumTitle;
+  final String? albumCover;
 
-  const AlbumPage({super.key, required this.artist});
+  const AlbumPage({
+    super.key,
+    required this.artist,
+    this.albumTitle,
+    this.albumCover,
+  });
 
-  Future<List<Song>> _loadSongs() {
+  Future<List<Song>> _loadSongs() async {
+    final selectedAlbum = albumTitle?.trim() ?? '';
+    if (selectedAlbum.isNotEmpty) {
+      return SongApi.fetchSongsByAlbum(selectedAlbum);
+    }
+
     final q = artist.trim();
-    if (q.isEmpty) return SongApi.fetchSongs();
-    return SongApi.searchSongs(q);
+    final songs = q.isEmpty
+        ? await SongApi.fetchSongs()
+        : await SongApi.searchSongs(q);
+    return songs;
   }
 
   String _artistName(List<Song> songs) {
@@ -29,6 +43,8 @@ class AlbumPage extends StatelessWidget {
   }
 
   String _albumName(List<Song> songs) {
+    final selectedAlbum = albumTitle?.trim() ?? '';
+    if (selectedAlbum.isNotEmpty) return selectedAlbum;
     if (songs.isNotEmpty && songs.first.album.trim().isNotEmpty) {
       return songs.first.album;
     }
@@ -37,7 +53,17 @@ class AlbumPage extends StatelessWidget {
 
   String _songCountText(int count) => count == 1 ? '1 Song' : '$count Songs';
 
-  Widget _heroCover() {
+  Widget _heroCover(List<Song> songs) {
+    final selectedCover = albumCover?.trim() ?? '';
+    final songCover = songs.isNotEmpty
+        ? (songs.first.imageUrl?.trim() ?? '')
+        : '';
+    final cover = selectedCover.isNotEmpty ? selectedCover : songCover;
+    final hasAssetCover = cover.startsWith('assets/');
+    final hasNetworkCover =
+        cover.startsWith('http://') || cover.startsWith('https://');
+    final hasCover = hasAssetCover || hasNetworkCover;
+
     return Container(
       width: 214,
       height: 214,
@@ -61,6 +87,20 @@ class AlbumPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         child: Stack(
           children: [
+            if (hasCover)
+              Positioned.fill(
+                child: hasAssetCover
+                    ? Image.asset(
+                        cover,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      )
+                    : Image.network(
+                        cover,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+              ),
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -75,9 +115,10 @@ class AlbumPage extends StatelessWidget {
                 ),
               ),
             ),
-            const Center(
-              child: Icon(Icons.album_rounded, size: 64, color: Colors.white),
-            ),
+            if (!hasCover)
+              const Center(
+                child: Icon(Icons.album_rounded, size: 64, color: Colors.white),
+              ),
           ],
         ),
       ),
@@ -314,7 +355,10 @@ class AlbumPage extends StatelessWidget {
                     child: const SizedBox.expand(),
                   ),
                 ),
-                Align(alignment: const Alignment(0, 0.72), child: _heroCover()),
+                Align(
+                  alignment: const Alignment(0, 0.72),
+                  child: _heroCover(songs),
+                ),
               ],
             ),
           ),

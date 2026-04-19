@@ -22,6 +22,8 @@ class _LoginPageState extends State<LoginPage>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoggingIn = false;
+  bool _isGoogleLoggingIn = false;
+  bool _isFacebookLoggingIn = false;
 
   @override
   void initState() {
@@ -147,7 +149,7 @@ class _LoginPageState extends State<LoginPage>
                               alignment: Alignment.centerRight,
                               child: GestureDetector(
                                 onTap: () => _show(
-                                  'Use demo@rizz.app / 123456 or change password from settings after login.',
+                                  'Reset flow is not connected yet. Use your registered account credentials.',
                                 ),
                                 child: Text(
                                   'Forgot password?',
@@ -173,15 +175,29 @@ class _LoginPageState extends State<LoginPage>
                               children: [
                                 Expanded(
                                   child: _socialButton(
-                                    label: 'Google',
+                                    label: _isGoogleLoggingIn
+                                        ? 'Signing in...'
+                                        : 'Google',
                                     icon: Icons.g_mobiledata_rounded,
+                                    onTap:
+                                        _isGoogleLoggingIn ||
+                                            _isFacebookLoggingIn
+                                        ? null
+                                        : _handleGoogleLogin,
                                   ),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: _socialButton(
-                                    label: 'Facebook',
+                                    label: _isFacebookLoggingIn
+                                        ? 'Signing in...'
+                                        : 'Facebook',
                                     icon: Icons.facebook_rounded,
+                                    onTap:
+                                        _isGoogleLoggingIn ||
+                                            _isFacebookLoggingIn
+                                        ? null
+                                        : _handleFacebookLogin,
                                   ),
                                 ),
                               ],
@@ -358,14 +374,50 @@ class _LoginPageState extends State<LoginPage>
       return;
     }
 
+    _onLoginSuccess();
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    setState(() => _isGoogleLoggingIn = true);
+    final error = await AuthStore.signInWithGoogle();
+    setState(() => _isGoogleLoggingIn = false);
+
+    if (!mounted) return;
+    if (error != null) {
+      _show(error);
+      return;
+    }
+
+    _onLoginSuccess();
+  }
+
+  Future<void> _handleFacebookLogin() async {
+    setState(() => _isFacebookLoggingIn = true);
+    final error = await AuthStore.signInWithFacebook();
+    setState(() => _isFacebookLoggingIn = false);
+
+    if (!mounted) return;
+    if (error != null) {
+      _show(error);
+      return;
+    }
+
+    _onLoginSuccess();
+  }
+
+  void _onLoginSuccess() {
     final user = AuthStore.currentUser.value!;
     final currentProfile = ProfileStore.profile.value;
+    final fallbackName = user.email.split('@').first;
     final username = user.email
         .split('@')
         .first
         .replaceAll(RegExp(r'\\s+'), '');
     ProfileStore.update(
-      currentProfile.copyWith(name: user.name, username: username),
+      currentProfile.copyWith(
+        name: user.name.trim().isEmpty ? fallbackName : user.name,
+        username: username,
+      ),
     );
 
     Navigator.of(
@@ -379,13 +431,13 @@ class _LoginPageState extends State<LoginPage>
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Widget _socialButton({required String label, required IconData icon}) {
+  Widget _socialButton({
+    required String label,
+    required IconData icon,
+    required VoidCallback? onTap,
+  }) {
     return GestureDetector(
-      onTap: () {
-        _emailController.text = 'demo@rizz.app';
-        _passwordController.text = '123456';
-        _handleLogin();
-      },
+      onTap: onTap,
       child: Container(
         height: 46,
         decoration: BoxDecoration(

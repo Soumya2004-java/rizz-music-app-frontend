@@ -101,6 +101,8 @@ class _SignInOrSignUpState extends State<SignInOrSignUp>
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
               child: Column(
+
+                
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(

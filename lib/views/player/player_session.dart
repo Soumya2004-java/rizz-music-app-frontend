@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 
 import '../../songs/songs.dart';
 
@@ -195,11 +196,16 @@ class PlayerSession {
     required bool resetPosition,
   }) async {
     try {
+      final uri = Uri.parse(song.audioUrl!);
       if (resetPosition) {
-        await _audioPlayer.setUrl(song.audioUrl!);
+        await _audioPlayer.setAudioSource(
+          AudioSource.uri(uri, tag: _mediaItemForSong(song)),
+        );
       }
       if (!resetPosition && _audioPlayer.audioSource == null) {
-        await _audioPlayer.setUrl(song.audioUrl!);
+        await _audioPlayer.setAudioSource(
+          AudioSource.uri(uri, tag: _mediaItemForSong(song)),
+        );
       }
 
       final loadedDuration = _audioPlayer.duration;
@@ -580,6 +586,21 @@ class PlayerSession {
   void _emit() {
     if (_controller.isClosed) return;
     _controller.add(snapshot);
+  }
+
+  MediaItem _mediaItemForSong(Song song) {
+    final image = song.imageUrl?.trim() ?? '';
+    final artUri = image.startsWith('http://') || image.startsWith('https://')
+        ? Uri.parse(image)
+        : null;
+    return MediaItem(
+      id: song.id,
+      title: song.title,
+      artist: song.artist,
+      album: song.album,
+      duration: _durationForSong(song),
+      artUri: artUri,
+    );
   }
 
   Duration _durationForSong(Song? song) {

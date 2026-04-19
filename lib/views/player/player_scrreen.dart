@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../songs/songs.dart';
+import '../../widgets/glass_popup.dart';
 import 'player_session.dart';
 
 class PlayerScreen extends StatefulWidget {
@@ -17,8 +18,7 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen>
-    with SingleTickerProviderStateMixin
-{
+    with SingleTickerProviderStateMixin {
   final PlayerSession _session = PlayerSession.instance;
   late final AnimationController _discController;
   StreamSubscription<PlayerSnapshot>? _sessionSub;
@@ -117,173 +117,116 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Future<void> _openMoreActionsSheet() async {
     final song = _session.currentSong ?? widget.song;
-    await showModalBottomSheet<void>(
+    await showGlassBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(22),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(22),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.25),
-                        const Color(0xFFB8D3F0).withValues(alpha: 0.16),
-                        const Color(0xFF9DB5D6).withValues(alpha: 0.12),
-                      ],
-                    ),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.34),
-                      width: 1.05,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 34,
-                        height: 4,
-                        margin: const EdgeInsets.only(top: 10, bottom: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      ListTile(
-                        leading: Icon(
-                          _session.isCurrentSongLiked
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          color: Colors.white,
-                        ),
-                        title: Text(
-                          _session.isCurrentSongLiked
-                              ? 'Remove from favorites'
-                              : 'Add to favorites',
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        onTap: () {
-                          _session.toggleLikeCurrentSong();
-                          Navigator.pop(context);
-                        },
-                      ),
-                      ListTile(
-                        leading: const Icon(
-                          Icons.library_music_rounded,
-                          color: Colors.white,
-                        ),
-                        title: const Text(
-                          'View album',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        subtitle: Text(
-                          song?.album ?? 'Unknown album',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.66),
-                          ),
-                        ),
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.close_rounded, color: Colors.white),
-                        title: const Text(
-                          'Close',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        onTap: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
+      child: Builder(
+        builder: (sheetContext) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 34,
+                height: 4,
+                margin: const EdgeInsets.only(top: 10, bottom: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(20),
                 ),
               ),
-            ),
-          ),
-        );
-      },
+              ListTile(
+                leading: Icon(
+                  _session.isCurrentSongLiked
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  color: Colors.white,
+                ),
+                title: Text(
+                  _session.isCurrentSongLiked
+                      ? 'Remove from favorites'
+                      : 'Add to favorites',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  _session.toggleLikeCurrentSong();
+                  Navigator.pop(sheetContext);
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.library_music_rounded,
+                  color: Colors.white,
+                ),
+                title: const Text(
+                  'View album',
+                  style: TextStyle(color: Colors.white),
+                ),
+                subtitle: Text(
+                  song?.album ?? 'Unknown album',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.66)),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.close_rounded, color: Colors.white),
+                title: const Text(
+                  'Close',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () => Navigator.pop(sheetContext),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
   Future<void> _openDevicesSheet() async {
-    await showModalBottomSheet<void>(
+    await showGlassBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(22),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(22),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.25),
-                        const Color(0xFFB8D3F0).withValues(alpha: 0.16),
-                        const Color(0xFF9DB5D6).withValues(alpha: 0.12),
-                      ],
-                    ),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.34),
-                      width: 1.05,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 34,
-                        height: 4,
-                        margin: const EdgeInsets.only(top: 10, bottom: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      ..._session.availableDevices.map((device) {
-                        final selected = _session.activeDevice == device;
-                        return ListTile(
-                          leading: Icon(
-                            selected
-                                ? Icons.check_circle_rounded
-                                : Icons.radio_button_unchecked_rounded,
-                            color: selected
-                                ? const Color(0xFF39D98A)
-                                : Colors.white.withValues(alpha: 0.8),
-                          ),
-                          title: Text(
-                            device,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          onTap: () {
-                            _session.setActiveDevice(device);
-                            Navigator.pop(context);
-                            _showSnack('Output switched to $device');
-                          },
-                        );
-                      }),
-                    ],
-                  ),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
+      child: Builder(
+        builder: (sheetContext) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 34,
+                height: 4,
+                margin: const EdgeInsets.only(top: 10, bottom: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(20),
                 ),
               ),
-            ),
-          ),
-        );
-      },
+              ..._session.availableDevices.map((device) {
+                final selected = _session.activeDevice == device;
+                return ListTile(
+                  leading: Icon(
+                    selected
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    color: selected
+                        ? const Color(0xFF39D98A)
+                        : Colors.white.withValues(alpha: 0.8),
+                  ),
+                  title: Text(
+                    device,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    _session.setActiveDevice(device);
+                    Navigator.pop(sheetContext);
+                    _showSnack('Output switched to $device');
+                  },
+                );
+              }),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -469,10 +412,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                           gradient: const LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [
-                              Color(0xFF272C33),
-                              Color(0xFF13171D),
-                            ],
+                            colors: [Color(0xFF272C33), Color(0xFF13171D)],
                           ),
                         ),
                       ),
@@ -530,7 +470,8 @@ class _PlayerScreenState extends State<PlayerScreen>
     final isShuffleOn = _session.isShuffleEnabled;
     final repeatMode = _session.repeatMode;
     final canGoNext = _session.hasNextTrack;
-    final canGoPrevious = _session.hasPreviousTrack || position > const Duration(seconds: 3);
+    final canGoPrevious =
+        _session.hasPreviousTrack || position > const Duration(seconds: 3);
 
     return PopScope(
       canPop: true,
@@ -541,365 +482,381 @@ class _PlayerScreenState extends State<PlayerScreen>
       },
       child: Scaffold(
         body: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(image: artwork, fit: BoxFit.cover),
+          children: [
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(image: artwork, fit: BoxFit.cover),
+                ),
               ),
             ),
-          ),
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0x66000000),
-                  Color(0x9911141A),
-                  Color(0xF213141B),
-                ],
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x66000000),
+                    Color(0x9911141A),
+                    Color(0xF213141B),
+                  ],
+                ),
               ),
             ),
-          ),
-          BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
-            child: Container(color: Colors.black.withValues(alpha: 0.18)),
-          ),
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final sidePadding = constraints.maxWidth < 380 ? 16.0 : 24.0;
-                final artSize = math.min(
-                  constraints.maxWidth - (sidePadding * 2),
-                  360.0,
-                );
-                final discSize = artSize * 0.84;
-                final devicesCardWidth = math.min(
-                  constraints.maxWidth * 0.72,
-                  270.0,
-                );
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
+              child: Container(color: Colors.black.withValues(alpha: 0.18)),
+            ),
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final sidePadding = constraints.maxWidth < 380 ? 16.0 : 24.0;
+                  final artSize = math.min(
+                    constraints.maxWidth - (sidePadding * 2),
+                    360.0,
+                  );
+                  final discSize = artSize * 0.84;
+                  final devicesCardWidth = math.min(
+                    constraints.maxWidth * 0.72,
+                    270.0,
+                  );
 
-                return Padding(
-                  padding: EdgeInsets.fromLTRB(sidePadding, 8, sidePadding, 16),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          IconButton(
-                            onPressed: _minimizePlayer,
-                            icon: const Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              color: Colors.white,
-                              size: 30,
-                            ),
-                          ),
-                          Column(
-                            children: [
-                              Text(
-                                'PLAYING FROM',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.65),
-                                  fontSize: 10,
-                                  letterSpacing: 1.3,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              const Text(
-                                'RizzMusic',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          IconButton(
-                            onPressed: _openMoreActionsSheet,
-                            style: IconButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(44, 44),
-                            ),
-                            icon: ClipRRect(
-                              borderRadius: BorderRadius.circular(999),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                                child: Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(999),
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Colors.white.withValues(alpha: 0.28),
-                                        const Color(
-                                          0xFFB8D3F0,
-                                        ).withValues(alpha: 0.18),
-                                        const Color(
-                                          0xFF9DB5D6,
-                                        ).withValues(alpha: 0.14),
-                                      ],
-                                    ),
-                                    border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.34),
-                                      width: 1.05,
-                                    ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.more_horiz_rounded,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      _buildRetroTurntable(artwork, discSize),
-                      const SizedBox(height: 22),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  title,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 25,
-                                    fontWeight: FontWeight.w700,
-                                    height: 1.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  artist,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.75),
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          IconButton(
-                            onPressed: _session.toggleLikeCurrentSong,
-                            icon: Icon(
-                              isLiked
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
-                              color: isLiked
-                                  ? const Color(0xFFFF5A7A)
-                                  : Colors.white.withValues(alpha: 0.9),
-                              size: 28,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          thumbShape: const RoundSliderThumbShape(
-                            enabledThumbRadius: 6,
-                          ),
-                          overlayShape: const RoundSliderOverlayShape(
-                            overlayRadius: 12,
-                          ),
-                          trackHeight: 3,
-                          inactiveTrackColor: Colors.white.withValues(
-                            alpha: 0.32,
-                          ),
-                          activeTrackColor: Colors.white,
-                          thumbColor: Colors.white,
-                        ),
-                        child: Slider(
-                          value: position.inMilliseconds.toDouble().clamp(
-                            0,
-                            duration.inMilliseconds.toDouble(),
-                          ),
-                          max: duration.inMilliseconds.toDouble(),
-                          onChanged: (value) {
-                            _session.seek(
-                              Duration(milliseconds: value.round()),
-                            );
-                          },
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _fmt(position),
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.76),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          Text(
-                            _fmt(duration),
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.76),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          OutlinedButton.icon(
-                            onPressed: _openLyricsPage,
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.5),
-                              ),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                            ),
-                            icon: const Icon(Icons.lyrics_rounded, size: 18),
-                            label: const Text('Lyrics'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          IconButton(
-                            onPressed: _session.toggleShuffle,
-                            icon: Icon(
-                              Icons.shuffle_rounded,
-                              color: isShuffleOn
-                                  ? const Color(0xFF39D98A)
-                                  : Colors.white,
-                              size: 26,
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: canGoPrevious ? _session.playPrevious : null,
-                            icon: Icon(
-                              Icons.skip_previous_rounded,
-                              color: canGoPrevious
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.35),
-                              size: 36,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: _session.togglePlayPause,
-                            child: Container(
-                              height: 84,
-                              width: 84,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      sidePadding,
+                      8,
+                      sidePadding,
+                      16,
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              onPressed: _minimizePlayer,
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down_rounded,
                                 color: Colors.white,
-                              ),
-                              child: Icon(
-                                _session.isPlaying
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
-                                color: Colors.black,
-                                size: 52,
+                                size: 30,
                               ),
                             ),
-                          ),
-                          IconButton(
-                            onPressed: canGoNext ? _session.playNext : null,
-                            icon: Icon(
-                              Icons.skip_next_rounded,
-                              color: canGoNext
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.35),
-                              size: 36,
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: _session.cycleRepeatMode,
-                            icon: Icon(
-                              _repeatIcon(repeatMode),
-                              color: repeatMode == RepeatMode.off
-                                  ? Colors.white
-                                  : const Color(0xFF39D98A),
-                              size: 26,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Align(
-                        alignment: Alignment.center,
-                        child: SizedBox(
-                          width: devicesCardWidth,
-                          child: OutlinedButton.icon(
-                            onPressed: _openDevicesSheet,
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.5),
-                              ),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                            ),
-                            icon: const Icon(
-                              Icons.speaker_group_rounded,
-                              size: 18,
-                            ),
-                            label: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            Column(
                               children: [
-                                const Text('Devices Connected'),
                                 Text(
-                                  _session.activeDevice,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  'PLAYING FROM',
                                   style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.82),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white.withValues(alpha: 0.65),
+                                    fontSize: 10,
+                                    letterSpacing: 1.3,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'RizzMusic',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
                             ),
+                            IconButton(
+                              onPressed: _openMoreActionsSheet,
+                              style: IconButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(44, 44),
+                              ),
+                              icon: ClipRRect(
+                                borderRadius: BorderRadius.circular(999),
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(
+                                    sigmaX: 18,
+                                    sigmaY: 18,
+                                  ),
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(999),
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          Colors.white.withValues(alpha: 0.28),
+                                          const Color(
+                                            0xFFB8D3F0,
+                                          ).withValues(alpha: 0.18),
+                                          const Color(
+                                            0xFF9DB5D6,
+                                          ).withValues(alpha: 0.14),
+                                        ],
+                                      ),
+                                      border: Border.all(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.34,
+                                        ),
+                                        width: 1.05,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.more_horiz_rounded,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        _buildRetroTurntable(artwork, discSize),
+                        const SizedBox(height: 22),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 25,
+                                      fontWeight: FontWeight.w700,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    artist,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.75,
+                                      ),
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            IconButton(
+                              onPressed: _session.toggleLikeCurrentSong,
+                              icon: Icon(
+                                isLiked
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                color: isLiked
+                                    ? const Color(0xFFFF5A7A)
+                                    : Colors.white.withValues(alpha: 0.9),
+                                size: 28,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 6,
+                            ),
+                            overlayShape: const RoundSliderOverlayShape(
+                              overlayRadius: 12,
+                            ),
+                            trackHeight: 3,
+                            inactiveTrackColor: Colors.white.withValues(
+                              alpha: 0.32,
+                            ),
+                            activeTrackColor: Colors.white,
+                            thumbColor: Colors.white,
+                          ),
+                          child: Slider(
+                            value: position.inMilliseconds.toDouble().clamp(
+                              0,
+                              duration.inMilliseconds.toDouble(),
+                            ),
+                            max: duration.inMilliseconds.toDouble(),
+                            onChanged: (value) {
+                              _session.seek(
+                                Duration(milliseconds: value.round()),
+                              );
+                            },
                           ),
                         ),
-                      ),
-                      const Spacer(),
-                    ],
-                  ),
-                );
-              },
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _fmt(position),
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.76),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              _fmt(duration),
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.76),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: _openLyricsPage,
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                ),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                              ),
+                              icon: const Icon(Icons.lyrics_rounded, size: 18),
+                              label: const Text('Lyrics'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            IconButton(
+                              onPressed: _session.toggleShuffle,
+                              icon: Icon(
+                                Icons.shuffle_rounded,
+                                color: isShuffleOn
+                                    ? const Color(0xFF39D98A)
+                                    : Colors.white,
+                                size: 26,
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: canGoPrevious
+                                  ? _session.playPrevious
+                                  : null,
+                              icon: Icon(
+                                Icons.skip_previous_rounded,
+                                color: canGoPrevious
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 0.35),
+                                size: 36,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: _session.togglePlayPause,
+                              child: Container(
+                                height: 84,
+                                width: 84,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                ),
+                                child: Icon(
+                                  _session.isPlaying
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                  color: Colors.black,
+                                  size: 52,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: canGoNext ? _session.playNext : null,
+                              icon: Icon(
+                                Icons.skip_next_rounded,
+                                color: canGoNext
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 0.35),
+                                size: 36,
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: _session.cycleRepeatMode,
+                              icon: Icon(
+                                _repeatIcon(repeatMode),
+                                color: repeatMode == RepeatMode.off
+                                    ? Colors.white
+                                    : const Color(0xFF39D98A),
+                                size: 26,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Align(
+                          alignment: Alignment.center,
+                          child: SizedBox(
+                            width: devicesCardWidth,
+                            child: OutlinedButton.icon(
+                              onPressed: _openDevicesSheet,
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                ),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.speaker_group_rounded,
+                                size: 18,
+                              ),
+                              label: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Devices Connected'),
+                                  Text(
+                                    _session.activeDevice,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.82,
+                                      ),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
           ],
         ),
       ),

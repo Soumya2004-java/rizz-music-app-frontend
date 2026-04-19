@@ -1,29 +1,73 @@
 # rizzmusicapp
 
-Flutter music app with cloud-ready song listing and streaming playback.
+Flutter music app with Firebase-powered streaming playback, profile, and settings.
 
-## Cloud storage setup (music for all users)
+## Firebase schema
 
-1. Upload your `.mp3` files and cover images to any cloud storage (Firebase Storage, AWS S3, GCP Storage, Cloudinary).
-2. Create a public JSON catalog (example: [`cloud_songs_example.json`](cloud_songs_example.json)) with:
-   - `id`
-   - `title`
-   - `artist`
-   - `album`
-   - `audioUrl` (public HTTPS URL to the music file)
-   - `imageUrl` (optional cover image URL)
-   - `durationSeconds` (optional)
-3. Host that JSON file at a public URL.
-4. Run the app with:
+### `songs` (required)
+
+Per document:
+
+- `title` (string)
+- `artist` (string)
+- `album` (string)
+- `audioPath` (string, pattern `music/{artist-slug}/{song-slug}.mp3`) or `audioUrl`
+- `imagePath` (string, pattern `covers/{artist-slug}/{song-slug}.jpg`) or `imageUrl`
+- `durationSeconds` (number, optional)
+
+### `playlists` (optional)
+
+Per document:
+
+- `name` (string)
+- `description` (string, optional)
+- `imageUrl` (string, optional)
+- `songIds` (array of song document IDs)
+
+### `users/{uid}` (required for profile/settings)
+
+Fields used:
+
+- `name`, `username`, `bio`, `membership`
+- `favoriteGenre`, `favoriteArtist`, `location`
+- `appSettings` (map):
+  - `wifiOnlyDownloads`, `normalizeAudio`, `autoplay`, `crossfade`
+  - `equalizerEnabled`, `pushNewReleases`, `pushRecommendations`
+  - `privateSession`, `listeningActivityVisible`, `biometricLock`
+  - `crossfadeSeconds`, `bassLevel`, `midLevel`, `trebleLevel`
+  - `dolbyAtmos`, `highResMusic`, `equalizerPreset`, `theme`, `language`, `cacheLimit`
+
+### `app_config/mobile` (optional, global app options)
+
+Fields used:
+
+- `membershipPlans`, `themes`, `languages`, `cacheLimits`
+- `equalizerPresets`, `dolbyAtmosOptions`, `highResOptions`
+- `reportProblemTypes`
+- `helpFaqs` (array of objects: `question`, `answer`)
+- `aboutAppName`, `aboutVersion`, `aboutDescription`
+
+### `support_reports` (optional)
+
+Submitted from Report Problem screen:
+
+- `uid`, `email`, `type`, `message`, `status`, `createdAt`
+
+## Firestore rules
+
+This repo includes rules for:
+
+- user-scoped read/write on `users/{uid}`
+- authenticated read on `songs` and `app_config`
+- authenticated create on `support_reports`
+
+## Running
 
 ```bash
-flutter run --dart-define=SONGS_CATALOG_URL=https://your-domain.com/songs.json
+flutter pub get
+flutter run
 ```
 
-If `SONGS_CATALOG_URL` is not provided, app falls back to the existing backend API (`API_BASE_URL` + `/songs`).
+## Social sign-in setup
 
-## Optional backend URL override
-
-```bash
-flutter run --dart-define=API_BASE_URL=https://your-api-domain.com
-```
+- `SOCIAL_SIGNIN_SETUP.md`

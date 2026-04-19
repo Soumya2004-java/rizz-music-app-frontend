@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 class FloatingPillGlassCard extends StatelessWidget {
@@ -23,8 +24,6 @@ class FloatingPillGlassCard extends StatelessWidget {
         margin: const EdgeInsets.only(right: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(50),
-
-          // 🌫️ soft floating shadow
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.25),
@@ -42,11 +41,7 @@ class FloatingPillGlassCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(50),
-
-                // 🧊 glass base
                 color: Colors.white.withValues(alpha: 0.16),
-
-                // subtle highlight
                 border: Border.all(
                   color: Colors.white.withValues(alpha: 0.35),
                   width: 1,
@@ -55,22 +50,15 @@ class FloatingPillGlassCard extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 🎧 album image
                   ClipRRect(
                     borderRadius: BorderRadius.circular(32),
-                    child: Image.asset(
-                      image,
+                    child: SizedBox(
                       width: 44,
                       height: 44,
-                      fit: BoxFit.cover,
-                      cacheWidth: imageSizePx,
-                      filterQuality: FilterQuality.low,
+                      child: _albumImage(image, imageSizePx),
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
-                  // 🎵 title
                   Text(
                     title,
                     style: const TextStyle(
@@ -79,7 +67,6 @@ class FloatingPillGlassCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-
                   const SizedBox(width: 6),
                 ],
               ),
@@ -87,6 +74,41 @@ class FloatingPillGlassCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _albumImage(String source, int imageSizePx) {
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return Image.network(
+        source,
+        width: 44,
+        height: 44,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.low,
+        errorBuilder: (_, __, ___) => _fallback(),
+      );
+    }
+
+    if (source.isNotEmpty) {
+      return Image.asset(
+        source,
+        width: 44,
+        height: 44,
+        fit: BoxFit.cover,
+        cacheWidth: imageSizePx,
+        filterQuality: FilterQuality.low,
+        errorBuilder: (_, __, ___) => _fallback(),
+      );
+    }
+
+    return _fallback();
+  }
+
+  Widget _fallback() {
+    return Container(
+      color: Colors.white.withValues(alpha: 0.14),
+      alignment: Alignment.center,
+      child: const Icon(Icons.album_rounded, color: Colors.white),
     );
   }
 }

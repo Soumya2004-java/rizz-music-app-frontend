@@ -1,0 +1,48 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "rizzmusic-ff756",
+          "appId": "1:1097226990560:android:22e320b0136d576ac0f185",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "rizzmusic-ff756",
+          "appId": "1:1097226990560:ios:a3eae16279bd35d5c0f185",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "rizzmusic-ff756",
+          "appId": "1:1097226990560:ios:a3eae16279bd35d5c0f185",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "rizzmusic-ff756",
+          "configurations": {
+            "android": "1:1097226990560:android:22e320b0136d576ac0f185",
+            "ios": "1:1097226990560:ios:a3eae16279bd35d5c0f185",
+            "macos": "1:1097226990560:ios:a3eae16279bd35d5c0f185",
+            "web": "1:1097226990560:web:f3eee42a7def85acc0f185",
+            "windows": "1:1097226990560:web:7988a82196385fbcc0f185"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}
