@@ -23,7 +23,6 @@ class _LoginPageState extends State<LoginPage>
   final _passwordController = TextEditingController();
   bool _isLoggingIn = false;
   bool _isGoogleLoggingIn = false;
-  bool _isFacebookLoggingIn = false;
 
   @override
   void initState() {
@@ -179,25 +178,9 @@ class _LoginPageState extends State<LoginPage>
                                         ? 'Signing in...'
                                         : 'Google',
                                     icon: Icons.g_mobiledata_rounded,
-                                    onTap:
-                                        _isGoogleLoggingIn ||
-                                            _isFacebookLoggingIn
+                                    onTap: _isGoogleLoggingIn
                                         ? null
                                         : _handleGoogleLogin,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _socialButton(
-                                    label: _isFacebookLoggingIn
-                                        ? 'Signing in...'
-                                        : 'Facebook',
-                                    icon: Icons.facebook_rounded,
-                                    onTap:
-                                        _isGoogleLoggingIn ||
-                                            _isFacebookLoggingIn
-                                        ? null
-                                        : _handleFacebookLogin,
                                   ),
                                 ),
                               ],
@@ -381,20 +364,6 @@ class _LoginPageState extends State<LoginPage>
     setState(() => _isGoogleLoggingIn = true);
     final error = await AuthStore.signInWithGoogle();
     setState(() => _isGoogleLoggingIn = false);
-
-    if (!mounted) return;
-    if (error != null) {
-      _show(error);
-      return;
-    }
-
-    _onLoginSuccess();
-  }
-
-  Future<void> _handleFacebookLogin() async {
-    setState(() => _isFacebookLoggingIn = true);
-    final error = await AuthStore.signInWithFacebook();
-    setState(() => _isFacebookLoggingIn = false);
 
     if (!mounted) return;
     if (error != null) {

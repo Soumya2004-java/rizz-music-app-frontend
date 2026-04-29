@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../background/gradient_mesh_background.dart';
 import '../../../music/music_repository.dart';
 import '../../../songs/songs.dart';
+import '../../../widgets/app_loading_animation.dart';
 import '../../player/player_scrreen.dart';
 import '../../player/player_session.dart';
 
@@ -43,7 +44,7 @@ class PlaylistPage extends StatelessWidget {
             future: MusicRepository.fetchPlaylists(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: AppLoadingAnimation());
               }
 
               if (snapshot.hasError) {

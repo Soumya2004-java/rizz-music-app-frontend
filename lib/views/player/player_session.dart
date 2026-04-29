@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:audio_session/audio_session.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
@@ -17,6 +20,8 @@ enum RepeatMode { off, all, one }
 
 class PlayerSession {
   PlayerSession._() {
+    _audioPlayer.setVolume(_volume);
+    _initDeviceMonitoring();
     _positionSub = _audioPlayer.positionStream.listen((position) {
       if (_isSimulatedPlayback) return;
       _position = position;
@@ -53,24 +58,22 @@ class PlayerSession {
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<Duration?>? _durationSub;
   StreamSubscription<PlayerState>? _stateSub;
+  StreamSubscription<Set<AudioDevice>>? _devicesSub;
 
   Song? _currentSong;
   final List<Song> _queue = <Song>[];
   final Set<String> _likedSongIds = <String>{};
   final Random _random = Random();
-  final List<String> _availableDevices = const [
-    'This phone speaker',
-    'Bluetooth Headphones',
-    'Car Audio',
-    'Smart TV',
-  ];
+  final List<String> _availableDevices = <String>[];
   bool _isPlaying = false;
   bool _isMinimized = false;
   bool _isShuffleEnabled = false;
   RepeatMode _repeatMode = RepeatMode.off;
-  String _activeDevice = 'This phone speaker';
+  String _localPhoneName = 'This phone';
+  String _activeDevice = 'Phone speaker';
+  double _volume = 1.0;
   Duration _position = Duration.zero;
-  Duration _duration = const Duration(minutes: 3, seconds: 42);
+  Duration _duration = Duration.zero;
   double _bpm = 108;
   Timer? _ticker;
 
@@ -84,7 +87,12 @@ class PlayerSession {
   bool get isShuffleEnabled => _isShuffleEnabled;
   RepeatMode get repeatMode => _repeatMode;
   String get activeDevice => _activeDevice;
+  double get volume => _volume;
   List<String> get availableDevices => List.unmodifiable(_availableDevices);
+  int get connectedOutputCount => _availableDevices.length;
+  List<Song> get queue => List.unmodifiable(_queue);
+  Set<String> get likedSongIds => Set.unmodifiable(_likedSongIds);
+  int get currentQueueIndex => _currentQueueIndex;
   bool get isCurrentSongLiked {
     final id = _currentSong?.id;
     if (id == null) return false;
@@ -291,6 +299,149 @@ class PlayerSession {
     if (!_availableDevices.contains(device)) return;
     _activeDevice = device;
     _emit();
+  }
+
+  void setVolume(double value) {
+    final next = value.clamp(0.0, 1.0).toDouble();
+    if ((next - _volume).abs() < 0.001) return;
+    _volume = next;
+    _audioPlayer.setVolume(_volume);
+    _emit();
+  }
+
+  Future<void> _initDeviceMonitoring() async {
+    try {
+      _localPhoneName = await _resolveLocalPhoneName();
+      final session = await AudioSession.instance;
+      final devices = await session.getDevices(
+        includeInputs: false,
+        includeOutputs: true,
+      );
+      _refreshOutputDevices(devices);
+
+      _devicesSub = session.devicesStream.listen((devices) {
+        _refreshOutputDevices(devices);
+        _emit();
+      });
+      _emit();
+    } catch (_) {
+      _availableDevices
+        ..clear()
+        ..add(_phoneSpeakerLabel);
+      _activeDevice = _phoneSpeakerLabel;
+      _emit();
+    }
+  }
+
+  void _refreshOutputDevices(Set<AudioDevice> devices) {
+    final outputDevices = devices.where((device) => device.isOutput).toList();
+    final next = <String>[];
+    final seen = <String>{};
+
+    for (final device in outputDevices) {
+      final name = _deviceLabel(device);
+      final key = name.toLowerCase();
+      if (seen.add(key)) {
+        next.add(name);
+      }
+    }
+
+    if (next.isEmpty) {
+      next.add(_phoneSpeakerLabel);
+    }
+
+    _availableDevices
+      ..clear()
+      ..addAll(next);
+
+    // Keep active device aligned with current system route ordering.
+    if (_availableDevices.isNotEmpty) {
+      _activeDevice = _availableDevices.first;
+    }
+  }
+
+  String get _phoneSpeakerLabel => '$_localPhoneName speaker';
+
+  String _deviceLabel(AudioDevice device) {
+    final raw = device.name.trim();
+    if (raw.isNotEmpty && raw.toLowerCase() != 'unknown') {
+      return raw;
+    }
+    switch (device.type) {
+      case AudioDeviceType.bluetoothA2dp:
+      case AudioDeviceType.bluetoothLe:
+      case AudioDeviceType.bluetoothSco:
+        return 'Bluetooth audio';
+      case AudioDeviceType.wiredHeadphones:
+        return 'Wired headphones';
+      case AudioDeviceType.wiredHeadset:
+        return 'Wired headset';
+      case AudioDeviceType.usbAudio:
+        return 'USB audio';
+      case AudioDeviceType.hdmi:
+      case AudioDeviceType.hdmiArc:
+      case AudioDeviceType.displayPort:
+        return 'HDMI / Display audio';
+      case AudioDeviceType.carAudio:
+        return 'Car audio';
+      case AudioDeviceType.airPlay:
+        return 'AirPlay';
+      case AudioDeviceType.builtInEarpiece:
+        return 'Phone earpiece';
+      case AudioDeviceType.builtInSpeaker:
+      case AudioDeviceType.builtInSpeakerSafe:
+        return 'Phone speaker';
+      default:
+        return 'Audio output';
+    }
+  }
+
+  Future<String> _resolveLocalPhoneName() async {
+    if (kIsWeb) return 'This device';
+
+    try {
+      final plugin = DeviceInfoPlugin();
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.android:
+          final info = await plugin.androidInfo;
+          final model = info.model.trim();
+          final brand = info.brand.trim();
+          if (model.isNotEmpty && brand.isNotEmpty) {
+            final modelLower = model.toLowerCase();
+            final brandLower = brand.toLowerCase();
+            return modelLower.startsWith(brandLower) ? model : '$brand $model';
+          }
+          if (model.isNotEmpty) return model;
+          if (brand.isNotEmpty) return brand;
+          break;
+        case TargetPlatform.iOS:
+          final info = await plugin.iosInfo;
+          final name = info.name.trim();
+          if (name.isNotEmpty) return name;
+          final model = info.model.trim();
+          if (model.isNotEmpty) return model;
+          break;
+        case TargetPlatform.macOS:
+          final info = await plugin.macOsInfo;
+          final name = info.computerName.trim();
+          if (name.isNotEmpty) return name;
+          break;
+        case TargetPlatform.windows:
+          final info = await plugin.windowsInfo;
+          final name = info.computerName.trim();
+          if (name.isNotEmpty) return name;
+          break;
+        case TargetPlatform.linux:
+          final info = await plugin.linuxInfo;
+          final name = info.name.trim();
+          if (name.isNotEmpty) return name;
+          break;
+        case TargetPlatform.fuchsia:
+          break;
+      }
+    } catch (_) {}
+
+    return 'This phone';
   }
 
   void playNext() {
@@ -608,19 +759,7 @@ class PlayerSession {
     if (remoteDuration != null && remoteDuration > 0) {
       return Duration(seconds: remoteDuration);
     }
-
-    switch (song?.id) {
-      case '1':
-        return const Duration(minutes: 3, seconds: 18);
-      case '2':
-        return const Duration(minutes: 4, seconds: 1);
-      case '3':
-        return const Duration(minutes: 3, seconds: 46);
-      case '4':
-        return const Duration(minutes: 2, seconds: 59);
-      default:
-        return const Duration(minutes: 3, seconds: 42);
-    }
+    return Duration.zero;
   }
 
   double _bpmForSong(Song? song) {
@@ -643,6 +782,7 @@ class PlayerSession {
     await _positionSub?.cancel();
     await _durationSub?.cancel();
     await _stateSub?.cancel();
+    await _devicesSub?.cancel();
     await _audioPlayer.dispose();
     await _controller.close();
   }

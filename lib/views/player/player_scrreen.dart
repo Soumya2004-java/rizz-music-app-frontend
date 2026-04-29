@@ -3,8 +3,11 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
+import '../../songs/albums/album_page.dart';
 import '../../songs/songs.dart';
+import '../profile/settings/settings.dart';
 import '../../widgets/glass_popup.dart';
 import 'player_session.dart';
 
@@ -18,9 +21,10 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final PlayerSession _session = PlayerSession.instance;
   late final AnimationController _discController;
+  late final AnimationController _vibeController;
   StreamSubscription<PlayerSnapshot>? _sessionSub;
 
   @override
@@ -39,21 +43,38 @@ class _PlayerScreenState extends State<PlayerScreen>
       vsync: this,
       duration: const Duration(seconds: 14),
     );
+    _vibeController = AnimationController(
+      vsync: this,
+      duration: _pulseDurationForBpm(_session.bpm),
+    );
 
     _sessionSub = _session.stream.listen((_) {
       if (!mounted) return;
-      _syncDiscRotation();
+      _syncPlaybackAnimations();
       setState(() {});
     });
 
-    _syncDiscRotation();
+    _syncPlaybackAnimations();
   }
 
   @override
   void dispose() {
     _sessionSub?.cancel();
     _discController.dispose();
+    _vibeController.dispose();
     super.dispose();
+  }
+
+  Duration _pulseDurationForBpm(double bpm) {
+    final clampedBpm = bpm.clamp(72.0, 168.0);
+    final beatMs = (60000 / clampedBpm).round();
+    final pulseMs = (beatMs * 2).clamp(700, 1900).toInt();
+    return Duration(milliseconds: pulseMs);
+  }
+
+  void _syncPlaybackAnimations() {
+    _syncDiscRotation();
+    _syncVibePulse();
   }
 
   void _syncDiscRotation() {
@@ -68,6 +89,24 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
+  void _syncVibePulse() {
+    final targetDuration = _pulseDurationForBpm(_session.bpm);
+    if (_vibeController.duration != targetDuration) {
+      _vibeController.duration = targetDuration;
+    }
+
+    if (_session.isPlaying) {
+      if (!_vibeController.isAnimating) {
+        _vibeController.repeat(min: _vibeController.value);
+      }
+      return;
+    }
+
+    if (_vibeController.isAnimating) {
+      _vibeController.stop(canceled: false);
+    }
+  }
+
   void _minimizePlayer() {
     _session.minimize();
     final rootNavigator = Navigator.of(context, rootNavigator: true);
@@ -79,15 +118,6 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }
-  }
-
-  void _openLyricsPage() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const LyricsFullPage(),
-        fullscreenDialog: true,
-      ),
-    );
   }
 
   void _showSnack(String text) {
@@ -138,7 +168,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                   _session.isCurrentSongLiked
                       ? Icons.favorite_rounded
                       : Icons.favorite_border_rounded,
-                  color: Colors.white,
+                  color: Colors.black,
                 ),
                 title: Text(
                   _session.isCurrentSongLiked
@@ -154,7 +184,7 @@ class _PlayerScreenState extends State<PlayerScreen>
               ListTile(
                 leading: const Icon(
                   Icons.library_music_rounded,
-                  color: Colors.white,
+                  color: Colors.black,
                 ),
                 title: const Text(
                   'View album',
@@ -162,10 +192,41 @@ class _PlayerScreenState extends State<PlayerScreen>
                 ),
                 subtitle: Text(
                   song?.album ?? 'Unknown album',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.66)),
+                  style: TextStyle(color: Colors.white),
                 ),
                 onTap: () {
                   Navigator.pop(sheetContext);
+                  if (song == null) {
+                    _showSnack('No album available for this track');
+                    return;
+                  }
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => AlbumPage(
+                        artist: song.artist,
+                        albumTitle: song.album,
+                        albumCover: song.imageUrl,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.equalizer_rounded,
+                  color: Colors.black,
+                ),
+                title: const Text(
+                  'Equalizer',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const SettingsPage(focusEqualizer: true),
+                    ),
+                  );
                 },
               ),
               ListTile(
@@ -189,6 +250,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
       child: Builder(
         builder: (sheetContext) {
+          final connectedCount = _session.connectedOutputCount;
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -199,6 +261,43 @@ class _PlayerScreenState extends State<PlayerScreen>
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.speaker_group_rounded,
+                      color: Colors.black,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Devices Connected',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            '$connectedCount device${connectedCount == 1 ? '' : 's'} available',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
               ..._session.availableDevices.map((device) {
@@ -230,11 +329,364 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
+  Future<void> _openVolumeSheet() async {
+    double popupVolume = _session.volume.clamp(0.0, 1.0).toDouble();
+    await showGlassBottomSheet<void>(
+      context: context,
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
+      child: Builder(
+        builder: (_) {
+          return StatefulBuilder(
+            builder: (context, setSheetState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 34,
+                    height: 4,
+                    margin: const EdgeInsets.only(top: 10, bottom: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Volume',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: _buildVolumeRocker(
+                      volume: popupVolume,
+                      onChanged: (value) {
+                        setSheetState(() {
+                          popupVolume = value;
+                        });
+                        _session.setVolume(value);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _openUpNextSheet() async {
+    await showGlassBottomSheet<void>(
+      context: context,
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+      child: Builder(
+        builder: (sheetContext) {
+          final queue = _session.queue;
+          final currentIndex = _session.currentQueueIndex;
+          final upNextQueue = currentIndex >= 0
+              ? queue.sublist(currentIndex)
+              : queue;
+          final recentlyPlayedQueue = currentIndex > 0
+              ? queue.sublist(0, currentIndex).reversed.toList()
+              : const <Song>[];
+          final hasAnyQueueItems =
+              upNextQueue.isNotEmpty || recentlyPlayedQueue.isNotEmpty;
+
+          return ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.66,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 34,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 10, bottom: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.queue_music_rounded,
+                        color: Colors.black,
+                        size: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Up Next',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!hasAnyQueueItems)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 22),
+                    child: Text(
+                      'No songs in queue yet.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      physics: const BouncingScrollPhysics(),
+                      children: [
+                        if (recentlyPlayedQueue.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
+                            child: Text(
+                              'Recently Played',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          ...recentlyPlayedQueue.map((song) {
+                            final imageUrl = song.imageUrl?.trim() ?? '';
+                            final hasImage = imageUrl.isNotEmpty;
+                            return ListTile(
+                              onTap: () {
+                                Navigator.pop(sheetContext);
+                                _session.playSong(song);
+                              },
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: SizedBox(
+                                  width: 44,
+                                  height: 44,
+                                  child: hasImage
+                                      ? Image.network(
+                                          imageUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, _, _) => Container(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.14,
+                                            ),
+                                            child: const Icon(
+                                              Icons.music_note_rounded,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        )
+                                      : Container(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.14,
+                                          ),
+                                          child: const Icon(
+                                            Icons.music_note_rounded,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              title: Text(
+                                song.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: Text(
+                                song.artist,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              trailing: Text(
+                                'Played',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                        if (upNextQueue.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
+                            child: Text(
+                              'Now & Up Next',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          ...upNextQueue.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final song = entry.value;
+                            final isCurrent = index == 0 && currentIndex >= 0;
+                            final imageUrl = song.imageUrl?.trim() ?? '';
+                            final hasImage = imageUrl.isNotEmpty;
+                            return ListTile(
+                              onTap: () {
+                                Navigator.pop(sheetContext);
+                                _session.playSong(song);
+                              },
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: SizedBox(
+                                  width: 44,
+                                  height: 44,
+                                  child: hasImage
+                                      ? Image.network(
+                                          imageUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, _, _) => Container(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.14,
+                                            ),
+                                            child: const Icon(
+                                              Icons.music_note_rounded,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        )
+                                      : Container(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.14,
+                                          ),
+                                          child: const Icon(
+                                            Icons.music_note_rounded,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              title: Text(
+                                song.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: isCurrent
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: Text(
+                                song.artist,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              trailing: isCurrent
+                                  ? SizedBox(
+                                      width: 36,
+                                      height: 36,
+                                      child: Lottie.asset(
+                                        'assets/anim/Recording.json',
+                                        repeat: true,
+                                      ),
+                                    )
+                                  : const SizedBox(width: 36, height: 36),
+                            );
+                          }),
+                        ],
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   IconData _repeatIcon(RepeatMode mode) {
     if (mode == RepeatMode.one) {
       return Icons.repeat_one_rounded;
     }
     return Icons.repeat_rounded;
+  }
+
+  Widget _buildVolumeRocker({
+    required double volume,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            volume <= 0.01 ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+            color: Colors.black,
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 11),
+                activeTrackColor: Colors.white,
+                inactiveTrackColor: Colors.white.withValues(alpha: 0.26),
+                thumbColor: Colors.white,
+              ),
+              child: Slider(
+                value: volume,
+                min: 0,
+                max: 1,
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _fmt(Duration d) {
@@ -469,9 +921,15 @@ class _PlayerScreenState extends State<PlayerScreen>
     final isLiked = _session.isCurrentSongLiked;
     final isShuffleOn = _session.isShuffleEnabled;
     final repeatMode = _session.repeatMode;
+    final isLight = Theme.of(context).brightness == Brightness.light;
     final canGoNext = _session.hasNextTrack;
     final canGoPrevious =
         _session.hasPreviousTrack || position > const Duration(seconds: 3);
+    final hasDuration = duration > Duration.zero;
+    final sliderMax = hasDuration ? duration.inMilliseconds.toDouble() : 1.0;
+    final sliderValue = hasDuration
+        ? position.inMilliseconds.toDouble().clamp(0, sliderMax).toDouble()
+        : 0.0;
 
     return PopScope(
       canPop: true,
@@ -491,21 +949,31 @@ class _PlayerScreenState extends State<PlayerScreen>
               ),
             ),
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Color(0x66000000),
-                    Color(0x9911141A),
-                    Color(0xF213141B),
+                    if (isLight) ...[
+                      Colors.transparent,
+                      Colors.transparent,
+                      Colors.transparent,
+                    ] else ...[
+                      const Color(0x66000000),
+                      const Color(0x9911141A),
+                      const Color(0xF213141B),
+                    ],
                   ],
                 ),
               ),
             ),
             BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
-              child: Container(color: Colors.black.withValues(alpha: 0.18)),
+              child: Container(
+                color: isLight
+                    ? Colors.grey.withValues(alpha: 0.24)
+                    : Colors.black.withValues(alpha: 0.18),
+              ),
             ),
             SafeArea(
               child: LayoutBuilder(
@@ -517,8 +985,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                   );
                   final discSize = artSize * 0.84;
                   final devicesCardWidth = math.min(
-                    constraints.maxWidth * 0.72,
-                    270.0,
+                    constraints.maxWidth * 0.56,
+                    210.0,
                   );
 
                   return Padding(
@@ -546,7 +1014,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 Text(
                                   'PLAYING FROM',
                                   style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.65),
+                                    color: Colors.white,
                                     fontSize: 10,
                                     letterSpacing: 1.3,
                                     fontWeight: FontWeight.w600,
@@ -566,48 +1034,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                             IconButton(
                               onPressed: _openMoreActionsSheet,
                               style: IconButton.styleFrom(
-                                padding: EdgeInsets.zero,
+                                padding: const EdgeInsets.all(10),
                                 minimumSize: const Size(44, 44),
                               ),
-                              icon: ClipRRect(
-                                borderRadius: BorderRadius.circular(999),
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(
-                                    sigmaX: 18,
-                                    sigmaY: 18,
-                                  ),
-                                  child: Container(
-                                    width: 44,
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(999),
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Colors.white.withValues(alpha: 0.28),
-                                          const Color(
-                                            0xFFB8D3F0,
-                                          ).withValues(alpha: 0.18),
-                                          const Color(
-                                            0xFF9DB5D6,
-                                          ).withValues(alpha: 0.14),
-                                        ],
-                                      ),
-                                      border: Border.all(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.34,
-                                        ),
-                                        width: 1.05,
-                                      ),
-                                    ),
-                                    child: const Icon(
-                                      Icons.more_horiz_rounded,
-                                      color: Colors.white,
-                                      size: 24,
-                                    ),
-                                  ),
-                                ),
+                              icon: const Icon(
+                                Icons.more_horiz_rounded,
+                                color: Colors.white,
+                                size: 28,
                               ),
                             ),
                           ],
@@ -628,7 +1061,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 25,
+                                      fontSize: 22,
                                       fontWeight: FontWeight.w700,
                                       height: 1.2,
                                     ),
@@ -639,10 +1072,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.75,
-                                      ),
-                                      fontSize: 17,
+                                      color: Colors.white,
+                                      fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -658,7 +1089,11 @@ class _PlayerScreenState extends State<PlayerScreen>
                                     : Icons.favorite_border_rounded,
                                 color: isLiked
                                     ? const Color(0xFFFF5A7A)
-                                    : Colors.white.withValues(alpha: 0.9),
+                                    : (isLight
+                                          ? Colors.black.withValues(alpha: 0.85)
+                                          : Colors.white.withValues(
+                                              alpha: 0.9,
+                                            )),
                                 size: 28,
                               ),
                             ),
@@ -674,23 +1109,24 @@ class _PlayerScreenState extends State<PlayerScreen>
                               overlayRadius: 12,
                             ),
                             trackHeight: 3,
-                            inactiveTrackColor: Colors.white.withValues(
-                              alpha: 0.32,
-                            ),
-                            activeTrackColor: Colors.white,
-                            thumbColor: Colors.white,
+                            inactiveTrackColor: isLight
+                                ? Colors.grey.withValues(alpha: 0.45)
+                                : Colors.white.withValues(alpha: 0.32),
+                            activeTrackColor: isLight
+                                ? Colors.black
+                                : Colors.white,
+                            thumbColor: isLight ? Colors.black : Colors.white,
                           ),
                           child: Slider(
-                            value: position.inMilliseconds.toDouble().clamp(
-                              0,
-                              duration.inMilliseconds.toDouble(),
-                            ),
-                            max: duration.inMilliseconds.toDouble(),
-                            onChanged: (value) {
-                              _session.seek(
-                                Duration(milliseconds: value.round()),
-                              );
-                            },
+                            value: sliderValue,
+                            max: sliderMax,
+                            onChanged: hasDuration
+                                ? (value) {
+                                    _session.seek(
+                                      Duration(milliseconds: value.round()),
+                                    );
+                                  }
+                                : null,
                           ),
                         ),
                         Row(
@@ -699,7 +1135,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                             Text(
                               _fmt(position),
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.76),
+                                color: Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -707,7 +1143,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                             Text(
                               _fmt(duration),
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.76),
+                                color: Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -719,12 +1155,14 @@ class _PlayerScreenState extends State<PlayerScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             OutlinedButton.icon(
-                              onPressed: _openLyricsPage,
+                              onPressed: _openUpNextSheet,
                               style: OutlinedButton.styleFrom(
                                 side: BorderSide(
                                   color: Colors.white.withValues(alpha: 0.5),
                                 ),
-                                foregroundColor: Colors.white,
+                                foregroundColor: isLight
+                                    ? Colors.black
+                                    : Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(24),
                                 ),
@@ -733,8 +1171,11 @@ class _PlayerScreenState extends State<PlayerScreen>
                                   vertical: 10,
                                 ),
                               ),
-                              icon: const Icon(Icons.lyrics_rounded, size: 18),
-                              label: const Text('Lyrics'),
+                              icon: const Icon(
+                                Icons.queue_music_rounded,
+                                size: 18,
+                              ),
+                              label: const Text('Up Next'),
                             ),
                           ],
                         ),
@@ -748,7 +1189,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 Icons.shuffle_rounded,
                                 color: isShuffleOn
                                     ? const Color(0xFF39D98A)
-                                    : Colors.white,
+                                    : (isLight ? Colors.black : Colors.white),
                                 size: 26,
                               ),
                             ),
@@ -759,8 +1200,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                               icon: Icon(
                                 Icons.skip_previous_rounded,
                                 color: canGoPrevious
-                                    ? Colors.white
-                                    : Colors.white.withValues(alpha: 0.35),
+                                    ? (isLight ? Colors.black : Colors.white)
+                                    : (isLight
+                                          ? Colors.black.withValues(alpha: 0.35)
+                                          : Colors.white.withValues(
+                                              alpha: 0.35,
+                                            )),
                                 size: 36,
                               ),
                             ),
@@ -771,13 +1216,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 width: 84,
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Colors.white,
+                                  color: Colors.black,
                                 ),
                                 child: Icon(
                                   _session.isPlaying
                                       ? Icons.pause_rounded
                                       : Icons.play_arrow_rounded,
-                                  color: Colors.black,
+                                  color: Colors.white,
                                   size: 52,
                                 ),
                               ),
@@ -787,8 +1232,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                               icon: Icon(
                                 Icons.skip_next_rounded,
                                 color: canGoNext
-                                    ? Colors.white
-                                    : Colors.white.withValues(alpha: 0.35),
+                                    ? (isLight ? Colors.black : Colors.white)
+                                    : (isLight
+                                          ? Colors.black.withValues(alpha: 0.35)
+                                          : Colors.white.withValues(
+                                              alpha: 0.35,
+                                            )),
                                 size: 36,
                               ),
                             ),
@@ -797,7 +1246,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                               icon: Icon(
                                 _repeatIcon(repeatMode),
                                 color: repeatMode == RepeatMode.off
-                                    ? Colors.white
+                                    ? (isLight ? Colors.black : Colors.white)
                                     : const Color(0xFF39D98A),
                                 size: 26,
                               ),
@@ -805,50 +1254,77 @@ class _PlayerScreenState extends State<PlayerScreen>
                           ],
                         ),
                         const SizedBox(height: 14),
-                        Align(
-                          alignment: Alignment.center,
-                          child: SizedBox(
-                            width: devicesCardWidth,
-                            child: OutlinedButton.icon(
-                              onPressed: _openDevicesSheet,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: devicesCardWidth,
+                              child: OutlinedButton.icon(
+                                onPressed: _openDevicesSheet,
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: Colors.white.withValues(alpha: 0.5),
+                                  ),
+                                  foregroundColor: isLight
+                                      ? Colors.black
+                                      : Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                ),
+                                icon: const Icon(
+                                  Icons.speaker_group_rounded,
+                                  size: 18,
+                                ),
+                                label: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${_session.connectedOutputCount} device${_session.connectedOutputCount == 1 ? '' : 's'} connected',
+                                    ),
+                                    Text(
+                                      _session.availableDevices.join(' • '),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            OutlinedButton(
+                              onPressed: _openVolumeSheet,
                               style: OutlinedButton.styleFrom(
                                 side: BorderSide(
                                   color: Colors.white.withValues(alpha: 0.5),
                                 ),
-                                foregroundColor: Colors.white,
+                                foregroundColor: isLight
+                                    ? Colors.black
+                                    : Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(24),
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
-                                ),
+                                padding: const EdgeInsets.all(12),
+                                minimumSize: const Size(46, 46),
                               ),
-                              icon: const Icon(
-                                Icons.speaker_group_rounded,
-                                size: 18,
-                              ),
-                              label: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Devices Connected'),
-                                  Text(
-                                    _session.activeDevice,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.82,
-                                      ),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
+                              child: Icon(
+                                _session.volume <= 0.01
+                                    ? Icons.volume_off_rounded
+                                    : Icons.volume_up_rounded,
+                                size: 22,
                               ),
                             ),
-                          ),
+                          ],
                         ),
                         const Spacer(),
                       ],
@@ -900,26 +1376,37 @@ class LyricsFullPage extends StatelessWidget {
         final artist = song?.artist ?? 'Unknown Artist';
         final lyrics = session.lyricsForCurrentSong();
         final active = session.activeLyricIndex(lyrics, data.position);
+        final isLight = Theme.of(context).brightness == Brightness.light;
 
         return Scaffold(
           body: Stack(
             children: [
               Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color(0xFF2E3340),
-                      Color(0xFF1D212B),
-                      Color(0xFF141821),
+                      if (isLight) ...[
+                        Colors.white.withValues(alpha: 0.9),
+                        const Color(0xFFF3F6FC),
+                        const Color(0xFFEAEFF9),
+                      ] else ...[
+                        const Color(0xFF2E3340),
+                        const Color(0xFF1D212B),
+                        const Color(0xFF141821),
+                      ],
                     ],
                   ),
                 ),
               ),
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
-                child: Container(color: Colors.black.withValues(alpha: 0.26)),
+                child: Container(
+                  color: isLight
+                      ? Colors.white.withValues(alpha: 0.22)
+                      : Colors.black.withValues(alpha: 0.26),
+                ),
               ),
               SafeArea(
                 child: Padding(
@@ -954,7 +1441,7 @@ class LyricsFullPage extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.74),
+                                    color: Colors.white,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -980,10 +1467,14 @@ class LyricsFullPage extends StatelessWidget {
                                 18,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.12),
+                                color: isLight
+                                    ? Colors.black.withValues(alpha: 0.08)
+                                    : Colors.white.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.22),
+                                  color: isLight
+                                      ? Colors.black.withValues(alpha: 0.14)
+                                      : Colors.white.withValues(alpha: 0.22),
                                 ),
                               ),
                               child: ListView.builder(

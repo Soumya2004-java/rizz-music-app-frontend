@@ -14,6 +14,7 @@ class GlassPopupContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
@@ -25,13 +26,21 @@ class GlassPopupContainer extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withValues(alpha: 0.25),
-                const Color(0xFFB8D3F0).withValues(alpha: 0.16),
-                const Color(0xFF9DB5D6).withValues(alpha: 0.12),
+                isLight
+                    ? Colors.white.withValues(alpha: 0.58)
+                    : Colors.white.withValues(alpha: 0.25),
+                isLight
+                    ? Colors.white.withValues(alpha: 0.42)
+                    : const Color(0xFFB8D3F0).withValues(alpha: 0.16),
+                isLight
+                    ? Colors.white.withValues(alpha: 0.30)
+                    : const Color(0xFF9DB5D6).withValues(alpha: 0.12),
               ],
             ),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.34),
+              color: isLight
+                  ? Colors.white.withValues(alpha: 0.70)
+                  : Colors.white.withValues(alpha: 0.34),
               width: 1.05,
             ),
           ),

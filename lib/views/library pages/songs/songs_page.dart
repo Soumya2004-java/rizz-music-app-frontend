@@ -5,18 +5,15 @@ import 'package:flutter/material.dart';
 import '../../../background/gradient_mesh_background.dart';
 import '../../../music/music_repository.dart';
 import '../../../songs/songs.dart';
+import '../../../widgets/app_loading_animation.dart';
 import '../../player/player_scrreen.dart';
 import '../../player/player_session.dart';
 
 class SongsPage extends StatelessWidget {
-  const SongsPage({
-    super.key,
-    this.title = 'All Songs',
-    this.tracks = const [],
-  });
+  const SongsPage({super.key, this.title = 'All Songs', this.songsOverride});
 
   final String title;
-  final List<Map<String, String>> tracks;
+  final List<Song>? songsOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -40,10 +37,12 @@ class SongsPage extends StatelessWidget {
             ),
           ),
           FutureBuilder<List<Song>>(
-            future: MusicRepository.fetchSongs(),
+            future: songsOverride != null
+                ? Future.value(songsOverride!)
+                : MusicRepository.fetchSongs(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: AppLoadingAnimation());
               }
 
               if (snapshot.hasError) {

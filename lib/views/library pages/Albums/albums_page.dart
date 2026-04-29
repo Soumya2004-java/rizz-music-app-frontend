@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../background/gradient_mesh_background.dart';
 import '../../../music/music_repository.dart';
 import '../../../songs/albums/album_page.dart';
+import '../../../widgets/app_loading_animation.dart';
 
 class AlbumsPage extends StatelessWidget {
   const AlbumsPage({super.key, this.selectedAlbums = const []});
@@ -36,7 +37,7 @@ class AlbumsPage extends StatelessWidget {
             future: MusicRepository.fetchAlbums(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: AppLoadingAnimation());
               }
 
               if (snapshot.hasError) {
@@ -97,6 +98,7 @@ class AlbumsPage extends StatelessWidget {
   }
 
   Widget _albumCard(BuildContext context, AlbumSummary album) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
@@ -138,8 +140,8 @@ class AlbumsPage extends StatelessWidget {
                     album.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isLight ? Colors.black : Colors.white,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -148,7 +150,10 @@ class AlbumsPage extends StatelessWidget {
                     album.artist,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    style: TextStyle(
+                      color: isLight ? Colors.black : Colors.white70,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(

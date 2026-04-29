@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../background/gradient_mesh_background.dart';
+import '../../../widgets/app_loading_animation.dart';
 import 'profile_store.dart';
 import 'settings_store.dart';
 
@@ -57,7 +58,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
             ),
           ),
           if (_loading)
-            const Center(child: CircularProgressIndicator())
+            const Center(child: AppLoadingAnimation())
           else
             ListView(
               padding: EdgeInsets.fromLTRB(

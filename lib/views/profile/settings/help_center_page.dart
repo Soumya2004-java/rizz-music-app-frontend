@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../background/gradient_mesh_background.dart';
+import '../../../widgets/app_loading_animation.dart';
 import 'settings_store.dart';
 
 class HelpCenterPage extends StatelessWidget {
@@ -31,7 +32,7 @@ class HelpCenterPage extends StatelessWidget {
             future: SettingsStore.fetchAppConfig(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: AppLoadingAnimation());
               }
               final config = snapshot.data ?? AppConfigData.defaults();
               return ListView(

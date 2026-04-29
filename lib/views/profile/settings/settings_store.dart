@@ -21,6 +21,8 @@ class AppConfigData {
   final String aboutAppName;
   final String aboutVersion;
   final String aboutDescription;
+  final String aboutDeveloperName;
+  final String aboutDeveloperEmail;
 
   const AppConfigData({
     required this.membershipPlans,
@@ -35,6 +37,8 @@ class AppConfigData {
     required this.aboutAppName,
     required this.aboutVersion,
     required this.aboutDescription,
+    required this.aboutDeveloperName,
+    required this.aboutDeveloperEmail,
   });
 
   factory AppConfigData.defaults() {
@@ -73,7 +77,11 @@ class AppConfigData {
       aboutAppName: 'Rizz Music App',
       aboutVersion: '1.0.0',
       aboutDescription:
-          'A modern music streaming app with Firebase-backed profile and settings.',
+          'Rizz Music App is a complete music streaming application for discovering songs, '
+          'exploring albums, managing favorites, and personalizing playback with audio '
+          'preferences like equalizer presets and quality settings.',
+      aboutDeveloperName: 'Rizz Music Team',
+      aboutDeveloperEmail: 'support@rizzmusic.app',
     );
   }
 
@@ -132,6 +140,14 @@ class AppConfigData {
       aboutAppName: readText('aboutAppName', defaults.aboutAppName),
       aboutVersion: readText('aboutVersion', defaults.aboutVersion),
       aboutDescription: readText('aboutDescription', defaults.aboutDescription),
+      aboutDeveloperName: readText(
+        'aboutDeveloperName',
+        defaults.aboutDeveloperName,
+      ),
+      aboutDeveloperEmail: readText(
+        'aboutDeveloperEmail',
+        defaults.aboutDeveloperEmail,
+      ),
     );
   }
 }

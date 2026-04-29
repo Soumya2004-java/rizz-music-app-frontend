@@ -35,11 +35,12 @@ dependencies:
   firebase_auth: ^5.3.4
   firebase_core: ^3.8.1
   firebase_storage: ^12.3.7
-  flutter_facebook_auth: ^7.1.6
   google_sign_in: ^6.3.0
   http: ^1.2.0
   just_audio: ^0.9.39
   just_audio_background: ^0.0.1-beta.17
+  audio_session: ^0.1.25
+  device_info_plus: ^11.2.0
 
 
   cupertino_icons: ^1.0.8

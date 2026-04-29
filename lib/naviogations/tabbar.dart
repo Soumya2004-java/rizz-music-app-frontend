@@ -75,6 +75,8 @@ class _TabbarsState extends State<Tabbars> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final navIconColor = isLight ? const Color(0xFF202A3F) : Colors.white;
     final itemWidth = (MediaQuery.of(context).size.width - 28 - 24) / 4;
 
     return Scaffold(
@@ -109,13 +111,21 @@ class _TabbarsState extends State<Tabbars> with RouteAware {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withValues(alpha: 0.28),
-                    const Color(0xFFB8D3F0).withValues(alpha: 0.18),
-                    const Color(0xFF9DB5D6).withValues(alpha: 0.14),
+                    isLight
+                        ? Colors.white.withValues(alpha: 0.56)
+                        : Colors.white.withValues(alpha: 0.28),
+                    isLight
+                        ? Colors.white.withValues(alpha: 0.40)
+                        : const Color(0xFFB8D3F0).withValues(alpha: 0.18),
+                    isLight
+                        ? Colors.white.withValues(alpha: 0.30)
+                        : const Color(0xFF9DB5D6).withValues(alpha: 0.14),
                   ],
                 ),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.36),
+                  color: isLight
+                      ? Colors.white.withValues(alpha: 0.66)
+                      : Colors.white.withValues(alpha: 0.36),
                   width: 1.1,
                 ),
                 boxShadow: [
@@ -138,8 +148,10 @@ class _TabbarsState extends State<Tabbars> with RouteAware {
                         borderRadius: BorderRadius.circular(999),
                         gradient: RadialGradient(
                           colors: [
-                            Colors.white.withValues(alpha: 0.34),
-                            Colors.white.withValues(alpha: 0),
+                            isLight
+                                ? Colors.white.withValues(alpha: 0.42)
+                                : Colors.white.withValues(alpha: 0.34),
+                            Colors.transparent,
                           ],
                         ),
                       ),
@@ -148,10 +160,28 @@ class _TabbarsState extends State<Tabbars> with RouteAware {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _navItem(Icons.home, 0, itemWidth),
-                      _navItem(Icons.search, 1, itemWidth),
-                      _navItem(Icons.library_music, 2, itemWidth),
-                      _navItem(Icons.person, 3, itemWidth),
+                      _navItem(Icons.home, 0, itemWidth, isLight, navIconColor),
+                      _navItem(
+                        Icons.search,
+                        1,
+                        itemWidth,
+                        isLight,
+                        navIconColor,
+                      ),
+                      _navItem(
+                        Icons.library_music,
+                        2,
+                        itemWidth,
+                        isLight,
+                        navIconColor,
+                      ),
+                      _navItem(
+                        Icons.person,
+                        3,
+                        itemWidth,
+                        isLight,
+                        navIconColor,
+                      ),
                     ],
                   ),
                 ],
@@ -163,7 +193,13 @@ class _TabbarsState extends State<Tabbars> with RouteAware {
     );
   }
 
-  Widget _navItem(IconData icon, int index, double itemWidth) {
+  Widget _navItem(
+    IconData icon,
+    int index,
+    double itemWidth,
+    bool isLight,
+    Color navIconColor,
+  ) {
     final isSelected = _currentIndex == index;
 
     return GestureDetector(
@@ -182,43 +218,48 @@ class _TabbarsState extends State<Tabbars> with RouteAware {
         if (index == _currentIndex) return;
 
         final distance = (index - _currentIndex).abs();
-        if (distance > 1) {
-          _pageController.jumpToPage(index);
-          return;
-        }
-
         setState(() => _isTabAnimating = true);
-        await _pageController.animateToPage(
-          index,
-          duration: const Duration(milliseconds: 260),
-          curve: Curves.easeOutCubic,
-        );
-        if (!mounted) return;
-        setState(() => _isTabAnimating = false);
+        try {
+          await _pageController.animateToPage(
+            index,
+            duration: Duration(milliseconds: distance > 1 ? 340 : 300),
+            curve: Curves.easeInOutCubicEmphasized,
+          );
+        } finally {
+          if (mounted) {
+            setState(() => _isTabAnimating = false);
+          }
+        }
       },
       child: SizedBox(
         width: itemWidth,
         child: Center(
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeInOutCubic,
             width: itemWidth,
             height: 52,
             decoration: BoxDecoration(
               color: isSelected
-                  ? Colors.white.withValues(alpha: 0.38)
+                  ? (isLight
+                        ? Colors.white.withValues(alpha: 0.60)
+                        : Colors.white.withValues(alpha: 0.38))
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(999),
               border: isSelected
-                  ? Border.all(color: Colors.white.withValues(alpha: 0.42))
+                  ? Border.all(
+                      color: isLight
+                          ? Colors.white.withValues(alpha: 0.78)
+                          : Colors.white.withValues(alpha: 0.42),
+                    )
                   : null,
             ),
             child: Icon(
               icon,
               size: 24,
               color: isSelected
-                  ? const Color(0xFF10151D)
-                  : Colors.white.withValues(alpha: 0.85),
+                  ? Colors.white
+                  : navIconColor.withValues(alpha: isLight ? 0.8 : 0.85),
             ),
           ),
         ),

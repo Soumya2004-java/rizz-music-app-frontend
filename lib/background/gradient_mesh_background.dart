@@ -16,9 +16,20 @@ class _GradientMeshLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final baseColor = isLight
+        ? const Color(0xFFF5F8FF)
+        : const Color(0xFF090E1A);
+    final topShade = isLight
+        ? Colors.black.withValues(alpha: 0.04)
+        : Colors.black.withValues(alpha: 0.16);
+    final bottomShade = isLight
+        ? Colors.black.withValues(alpha: 0.12)
+        : Colors.black.withValues(alpha: 0.40);
+
     return Stack(
       children: [
-        Container(color: const Color(0xFF090E1A)),
+        Container(color: baseColor),
         // Blur only the mesh blobs instead of the full backdrop layer.
         Positioned.fill(
           child: ImageFiltered(
@@ -26,25 +37,33 @@ class _GradientMeshLayer extends StatelessWidget {
             child: Stack(
               children: [
                 _meshBlob(
-                  color: const Color(0xFF2B6BFF),
+                  color: isLight
+                      ? const Color(0xFF7FA8FF)
+                      : const Color(0xFF2B6BFF),
                   top: -130,
                   left: -110,
                   size: 340,
                 ),
                 _meshBlob(
-                  color: const Color(0xFFFF7A59),
+                  color: isLight
+                      ? const Color(0xFFFFB18F)
+                      : const Color(0xFFFF7A59),
                   top: 70,
                   right: -120,
                   size: 310,
                 ),
                 _meshBlob(
-                  color: const Color(0xFF12B886),
+                  color: isLight
+                      ? const Color(0xFF79DDBE)
+                      : const Color(0xFF12B886),
                   bottom: -150,
                   left: 40,
                   size: 360,
                 ),
                 _meshBlob(
-                  color: const Color(0xFFFFB347),
+                  color: isLight
+                      ? const Color(0xFFFFD08A)
+                      : const Color(0xFFFFB347),
                   bottom: 110,
                   right: -90,
                   size: 280,
@@ -59,14 +78,28 @@ class _GradientMeshLayer extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.16),
-                  Colors.black.withValues(alpha: 0.40),
-                ],
+                colors: [topShade, bottomShade],
               ),
             ),
           ),
         ),
+        if (isLight)
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.03),
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.05),
+                  ],
+                  stops: const [0.0, 0.55, 1.0],
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

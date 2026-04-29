@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 @immutable
@@ -33,10 +32,6 @@ class AuthStore {
     defaultValue:
         '1097226990560-gn232sovgrhdfpg1fhsn32ur4a9mqf12.apps.googleusercontent.com',
   );
-  static const String _facebookAppId = String.fromEnvironment(
-    'FACEBOOK_APP_ID',
-    defaultValue: '',
-  );
 
   static bool _initialized = false;
 
@@ -45,15 +40,6 @@ class AuthStore {
   static void initialize() {
     if (_initialized) return;
     _initialized = true;
-
-    if (kIsWeb && _facebookAppId.isNotEmpty) {
-      FacebookAuth.i.webAndDesktopInitialize(
-        appId: _facebookAppId,
-        cookie: true,
-        xfbml: true,
-        version: 'v22.0',
-      );
-    }
 
     FirebaseAuth.instance.authStateChanges().listen((firebaseUser) async {
       if (firebaseUser == null) {
@@ -173,66 +159,6 @@ class AuthStore {
     }
   }
 
-  static Future<String?> signInWithFacebook() async {
-    try {
-      if (kIsWeb && _facebookAppId.isEmpty) {
-        return 'FACEBOOK_APP_ID is missing. Run with '
-            '--dart-define=FACEBOOK_APP_ID=<your-facebook-app-id>.';
-      }
-
-      UserCredential credential;
-
-      if (kIsWeb) {
-        final provider = FacebookAuthProvider();
-        credential = await FirebaseAuth.instance.signInWithPopup(provider);
-      } else {
-        final loginResult = await FacebookAuth.instance.login(
-          permissions: const ['email', 'public_profile'],
-        );
-
-        if (loginResult.status == LoginStatus.cancelled) {
-          return 'Facebook sign-in was cancelled.';
-        }
-        if (loginResult.status == LoginStatus.failed) {
-          final reason = loginResult.message?.trim();
-          return reason == null || reason.isEmpty
-              ? 'Facebook sign-in failed. Please try again.'
-              : reason;
-        }
-
-        final accessToken = loginResult.accessToken?.tokenString;
-        if (accessToken == null || accessToken.isEmpty) {
-          return 'Facebook did not return a valid access token.';
-        }
-
-        final authCredential = FacebookAuthProvider.credential(accessToken);
-        credential = await FirebaseAuth.instance.signInWithCredential(
-          authCredential,
-        );
-      }
-
-      final user = credential.user;
-      if (user == null) {
-        return 'Facebook sign-in failed. Please try again.';
-      }
-
-      final resolvedName = _resolvedDisplayName(user);
-      await _saveUserProfile(user.uid, resolvedName, user.email ?? '');
-
-      final account = await _accountFromFirebaseUser(user);
-      currentUser.value = account;
-      return null;
-    } on FirebaseAuthException catch (e) {
-      return _authErrorMessage(e);
-    } on PlatformException catch (e) {
-      return _providerPlatformErrorMessage('Facebook', e);
-    } catch (e, stackTrace) {
-      debugPrint('Facebook sign-in error: $e');
-      debugPrintStack(stackTrace: stackTrace);
-      return 'Could not sign in with Facebook. Please try again.';
-    }
-  }
-
   static Future<String?> changePassword({
     required String currentPassword,
     required String newPassword,
@@ -274,7 +200,6 @@ class AuthStore {
   static void signOut() {
     FirebaseAuth.instance.signOut();
     if (!kIsWeb) {
-      FacebookAuth.instance.logOut();
       _googleSignInClient().signOut();
     }
     currentUser.value = null;

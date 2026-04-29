@@ -1,10 +1,12 @@
 import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import '../../background/gradient_mesh_background.dart';
 import '../../views/player/player_scrreen.dart';
 import '../../views/player/player_session.dart';
+import '../../widgets/app_loading_animation.dart';
 import '../songs.dart';
 import '../songs_api.dart';
 
@@ -29,7 +31,7 @@ class AlbumPage extends StatelessWidget {
     final q = artist.trim();
     final songs = q.isEmpty
         ? await SongApi.fetchSongs()
-        : await SongApi.searchSongs(q);
+        : await SongApi.fetchSongsByArtist(q);
     return songs;
   }
 
@@ -125,37 +127,75 @@ class AlbumPage extends StatelessWidget {
     );
   }
 
-  Widget _actionButton(IconData icon, String label) {
+  Widget _actionButton(IconData icon, String label, VoidCallback onTap) {
     return Expanded(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            height: 52,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              child: Container(
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.20),
                   ),
                 ),
-              ],
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  void _playAlbum(BuildContext context, List<Song> songs) {
+    if (songs.isEmpty) return;
+    final session = PlayerSession.instance;
+    final firstSong = songs.first;
+    session.setQueue(songs, currentSong: firstSong);
+    if (session.isShuffleEnabled) {
+      session.toggleShuffle();
+    }
+    session.playSong(firstSong);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PlayerScreen(song: firstSong)),
+    );
+  }
+
+  void _shuffleAlbum(BuildContext context, List<Song> songs) {
+    if (songs.isEmpty) return;
+    final session = PlayerSession.instance;
+    final randomSong = songs[math.Random().nextInt(songs.length)];
+    session.setQueue(songs, currentSong: randomSong);
+    if (!session.isShuffleEnabled) {
+      session.toggleShuffle();
+    }
+    session.playSong(randomSong);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PlayerScreen(song: randomSong)),
     );
   }
 
@@ -285,9 +325,7 @@ class AlbumPage extends StatelessWidget {
     AsyncSnapshot<List<Song>> snapshot,
   ) {
     if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
-      );
+      return const Center(child: AppLoadingAnimation());
     }
 
     if (snapshot.hasError) {
@@ -390,9 +428,17 @@ class AlbumPage extends StatelessWidget {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    _actionButton(Icons.play_arrow_rounded, 'Play'),
+                    _actionButton(
+                      Icons.play_arrow_rounded,
+                      'Play',
+                      () => _playAlbum(context, songs),
+                    ),
                     const SizedBox(width: 12),
-                    _actionButton(Icons.shuffle_rounded, 'Shuffle'),
+                    _actionButton(
+                      Icons.shuffle_rounded,
+                      'Shuffle',
+                      () => _shuffleAlbum(context, songs),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 22),

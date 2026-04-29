@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../background/gradient_mesh_background.dart';
 import '../music/music_repository.dart';
 import '../songs/albums/album_page.dart';
+import '../widgets/app_loading_animation.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -35,7 +36,7 @@ class HomePage extends StatelessWidget {
               future: MusicRepository.fetchAlbums(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: AppLoadingAnimation());
                 }
 
                 if (snapshot.hasError) {
@@ -103,8 +104,10 @@ class HomePage extends StatelessWidget {
                           itemCount: featured.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(width: 12),
-                          itemBuilder: (context, index) =>
-                              _featuredTile(context, featured[index]),
+                          itemBuilder: (context, index) => _staggerReveal(
+                            index: index,
+                            child: _featuredTile(context, featured[index]),
+                          ),
                         ),
                       ),
                     ),
@@ -132,7 +135,10 @@ class HomePage extends StatelessWidget {
                               childAspectRatio: 0.68,
                             ),
                         delegate: SliverChildBuilderDelegate((context, index) {
-                          return _modernAlbumTile(context, albums[index]);
+                          return _staggerReveal(
+                            index: index,
+                            child: _modernAlbumTile(context, albums[index]),
+                          );
                         }, childCount: albums.length),
                       ),
                     ),
@@ -147,6 +153,7 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _featuredTile(BuildContext context, AlbumSummary album) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () => _openAlbum(context, album),
@@ -192,8 +199,8 @@ class HomePage extends StatelessWidget {
                       album.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: isLight ? Colors.black : Colors.white,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -203,8 +210,8 @@ class HomePage extends StatelessWidget {
                       album.artist,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white70,
+                      style: TextStyle(
+                        color: isLight ? Colors.black : Colors.white70,
                         fontSize: 12,
                       ),
                     ),
@@ -219,6 +226,7 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _modernAlbumTile(BuildContext context, AlbumSummary album) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
       child: BackdropFilter(
@@ -250,8 +258,8 @@ class HomePage extends StatelessWidget {
                     album.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isLight ? Colors.black : Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -261,7 +269,10 @@ class HomePage extends StatelessWidget {
                     album.artist,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    style: TextStyle(
+                      color: isLight ? Colors.black : Colors.white70,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -304,6 +315,26 @@ class HomePage extends StatelessWidget {
       color: Colors.white.withValues(alpha: 0.12),
       alignment: Alignment.center,
       child: const Icon(Icons.album_rounded, color: Colors.white70, size: 30),
+    );
+  }
+
+  Widget _staggerReveal({required int index, required Widget child}) {
+    final delay = (index * 40).clamp(0, 320);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 420 + delay),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, builtChild) {
+        final t = value.clamp(0.0, 1.0);
+        return Opacity(
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(0, 16 * (1 - t)),
+            child: builtChild,
+          ),
+        );
+      },
+      child: child,
     );
   }
 

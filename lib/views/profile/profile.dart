@@ -12,6 +12,10 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final primaryText = isLight ? const Color(0xFF5F6368) : Colors.white;
+    final secondaryText = isLight ? const Color(0xFF7A7F87) : Colors.white70;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -58,8 +62,8 @@ class ProfilePage extends StatelessWidget {
                           backgroundColor: Colors.white.withValues(alpha: 0.24),
                           child: Text(
                             _avatarText(profile.name),
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: primaryText,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -71,20 +75,20 @@ class ProfilePage extends StatelessWidget {
                             children: [
                               Text(
                                 profile.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: primaryText,
                                   fontSize: 22,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                               Text(
                                 '@${profile.username}',
-                                style: const TextStyle(color: Colors.white70),
+                                style: TextStyle(color: secondaryText),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 profile.membership,
-                                style: const TextStyle(color: Colors.white70),
+                                style: TextStyle(color: secondaryText),
                               ),
                             ],
                           ),
@@ -95,32 +99,44 @@ class ProfilePage extends StatelessWidget {
                   const SizedBox(height: 12),
                   _panel(
                     title: 'About',
+                    primaryText: primaryText,
+                    secondaryText: secondaryText,
                     children: [
                       _line(
                         'Bio',
                         profile.bio.isEmpty ? 'Not set' : profile.bio,
+                        primaryText: primaryText,
+                        secondaryText: secondaryText,
                       ),
                       _line(
                         'Favorite Genre',
                         profile.favoriteGenre.isEmpty
                             ? 'Not set'
                             : profile.favoriteGenre,
+                        primaryText: primaryText,
+                        secondaryText: secondaryText,
                       ),
                       _line(
                         'Favorite Artist',
                         profile.favoriteArtist.isEmpty
                             ? 'Not set'
                             : profile.favoriteArtist,
+                        primaryText: primaryText,
+                        secondaryText: secondaryText,
                       ),
                       _line(
                         'Location',
                         profile.location.isEmpty ? 'Not set' : profile.location,
+                        primaryText: primaryText,
+                        secondaryText: secondaryText,
                       ),
                       _line(
                         'Email',
                         AuthStore.currentUser.value?.email.isNotEmpty == true
                             ? AuthStore.currentUser.value!.email
                             : 'Not available',
+                        primaryText: primaryText,
+                        secondaryText: secondaryText,
                       ),
                     ],
                   ),
@@ -129,6 +145,8 @@ class ProfilePage extends StatelessWidget {
                     icon: Icons.edit_outlined,
                     title: 'Edit Profile',
                     subtitle: 'Update your information',
+                    primaryText: primaryText,
+                    secondaryText: secondaryText,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const EditProfilePage(),
@@ -139,6 +157,8 @@ class ProfilePage extends StatelessWidget {
                     icon: Icons.settings_outlined,
                     title: 'Settings',
                     subtitle: 'App preferences and controls',
+                    primaryText: primaryText,
+                    secondaryText: secondaryText,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const SettingsPage()),
                     ),
@@ -147,6 +167,8 @@ class ProfilePage extends StatelessWidget {
                     icon: Icons.library_music_rounded,
                     title: 'Your Songs',
                     subtitle: 'Open cloud song list',
+                    primaryText: primaryText,
+                    secondaryText: secondaryText,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const SongsPage()),
                     ),
@@ -160,7 +182,12 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _panel({required String title, required List<Widget> children}) {
+  Widget _panel({
+    required String title,
+    required Color primaryText,
+    required Color secondaryText,
+    required List<Widget> children,
+  }) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -173,8 +200,8 @@ class ProfilePage extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: primaryText,
               fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
@@ -186,19 +213,21 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _line(String label, String value) {
+  Widget _line(
+    String label,
+    String value, {
+    required Color primaryText,
+    required Color secondaryText,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: Colors.white70, fontSize: 13),
+          style: TextStyle(color: secondaryText, fontSize: 13),
           children: [
             TextSpan(
               text: '$label: ',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: primaryText, fontWeight: FontWeight.w600),
             ),
             TextSpan(text: value),
           ],
@@ -211,14 +240,16 @@ class ProfilePage extends StatelessWidget {
     required IconData icon,
     required String title,
     required String subtitle,
+    required Color primaryText,
+    required Color secondaryText,
     required VoidCallback onTap,
   }) {
     return ListTile(
       onTap: onTap,
-      leading: Icon(icon, color: Colors.white),
-      title: Text(title, style: const TextStyle(color: Colors.white)),
-      subtitle: Text(subtitle, style: const TextStyle(color: Colors.white70)),
-      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white70),
+      leading: Icon(icon, color: primaryText),
+      title: Text(title, style: TextStyle(color: primaryText)),
+      subtitle: Text(subtitle, style: TextStyle(color: secondaryText)),
+      trailing: Icon(Icons.chevron_right_rounded, color: secondaryText),
     );
   }
 

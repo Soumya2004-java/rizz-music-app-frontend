@@ -1,18 +1,16 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:rizzmusicapp/firebase_options.dart';
+import 'package:rizzmusicapp/naviogations/tabbar.dart';
 import 'package:rizzmusicapp/pages/Login_page.dart';
 import 'package:rizzmusicapp/pages/sign_in_or_sign_up_page.dart';
 import 'package:rizzmusicapp/pages/sign_up_page.dart';
-import 'package:rizzmusicapp/services/auth_store.dart';
 import 'package:rizzmusicapp/services/app_navigator.dart';
-import 'package:rizzmusicapp/views/profile/settings/profile_store.dart';
-import 'package:rizzmusicapp/naviogations/tabbar.dart';
+import 'package:rizzmusicapp/services/auth_store.dart';
+import 'package:rizzmusicapp/theme/app_theme.dart';
 import 'package:rizzmusicapp/views/player/global_mini_player.dart';
-import 'package:rizzmusicapp/firebase_options.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:rizzmusicapp/views/profile/settings/profile_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +34,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       navigatorKey: appNavigatorKey,
       navigatorObservers: [appRouteObserver],
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.system,
       home: ValueListenableBuilder<UserAccount?>(
         valueListenable: AuthStore.currentUser,
         builder: (context, user, _) {
@@ -44,9 +45,16 @@ class MyApp extends StatelessWidget {
         },
       ),
       builder: (context, child) {
+        final isLight = Theme.of(context).brightness == Brightness.light;
+        final globalTextColor = isLight
+            ? Colors.black54
+            : const Color(0xFFB7BFCE);
         return Stack(
           children: [
-            child ?? const SizedBox.shrink(),
+            DefaultTextStyle.merge(
+              style: TextStyle(color: globalTextColor),
+              child: child ?? const SizedBox.shrink(),
+            ),
             const Align(
               alignment: Alignment.bottomCenter,
               child: RepaintBoundary(child: GlobalMiniPlayerOverlay()),

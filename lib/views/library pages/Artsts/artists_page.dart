@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../background/gradient_mesh_background.dart';
 import '../../../music/music_repository.dart';
 import '../../../songs/albums/album_page.dart';
+import '../../../widgets/app_loading_animation.dart';
 
 class ArtistPage extends StatelessWidget {
   const ArtistPage({super.key, this.selectedArtists = const []});
@@ -36,7 +37,7 @@ class ArtistPage extends StatelessWidget {
             future: MusicRepository.fetchArtists(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: AppLoadingAnimation());
               }
 
               if (snapshot.hasError) {
@@ -97,6 +98,7 @@ class ArtistPage extends StatelessWidget {
   }
 
   Widget _artistCard(BuildContext context, ArtistSummary artist) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
@@ -138,8 +140,8 @@ class ArtistPage extends StatelessWidget {
                     artist.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isLight ? Colors.black : Colors.white,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

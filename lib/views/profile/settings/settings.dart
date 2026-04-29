@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../background/gradient_mesh_background.dart';
 import '../../../pages/sign_in_or_sign_up_page.dart';
 import '../../../services/auth_store.dart';
+import '../../../widgets/app_loading_animation.dart';
 import 'change_password_page.dart';
 import 'edit profile /edit_profile.dart';
 import 'help_center_page.dart';
@@ -14,9 +15,14 @@ import 'settings_store.dart';
 import 'subscription_page.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key, this.focusProfile = false});
+  const SettingsPage({
+    super.key,
+    this.focusProfile = false,
+    this.focusEqualizer = false,
+  });
 
   final bool focusProfile;
+  final bool focusEqualizer;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -26,6 +32,7 @@ class _SettingsPageState extends State<SettingsPage> {
   AppConfigData _config = AppConfigData.defaults();
   UserSettingsData _settings = UserSettingsData.defaults();
   bool _loading = true;
+  final GlobalKey _equalizerTileKey = GlobalKey();
 
   @override
   void initState() {
@@ -42,9 +49,23 @@ class _SettingsPageState extends State<SettingsPage> {
       _settings = settings;
       _loading = false;
     });
+    if (widget.focusEqualizer) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEqualizer());
+    }
   }
 
   Future<void> _save() => SettingsStore.saveUserSettings(_settings);
+
+  void _scrollToEqualizer() {
+    final targetContext = _equalizerTileKey.currentContext;
+    if (targetContext == null) return;
+    Scrollable.ensureVisible(
+      targetContext,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+      alignment: 0.2,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +89,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           if (_loading)
-            const Center(child: CircularProgressIndicator())
+            const Center(child: AppLoadingAnimation(size: 220))
           else
             ListView(
               padding: EdgeInsets.fromLTRB(
@@ -305,34 +326,38 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                         ),
                       ),
-                      _choiceTile(
-                        icon: Icons.equalizer_rounded,
-                        title: 'Equalizer Preset',
-                        value: _settings.equalizerPreset,
-                        options: _config.equalizerPresets,
-                        onChanged: (v) => _update(
-                          _settings = UserSettingsData(
-                            autoplay: _settings.autoplay,
-                            wifiOnlyDownloads: _settings.wifiOnlyDownloads,
-                            normalizeAudio: _settings.normalizeAudio,
-                            crossfade: _settings.crossfade,
-                            equalizerEnabled: _settings.equalizerEnabled,
-                            pushNewReleases: _settings.pushNewReleases,
-                            pushRecommendations: _settings.pushRecommendations,
-                            privateSession: _settings.privateSession,
-                            listeningActivityVisible:
-                                _settings.listeningActivityVisible,
-                            biometricLock: _settings.biometricLock,
-                            crossfadeSeconds: _settings.crossfadeSeconds,
-                            bassLevel: _settings.bassLevel,
-                            midLevel: _settings.midLevel,
-                            trebleLevel: _settings.trebleLevel,
-                            dolbyAtmos: _settings.dolbyAtmos,
-                            highResMusic: _settings.highResMusic,
-                            equalizerPreset: v,
-                            theme: _settings.theme,
-                            language: _settings.language,
-                            cacheLimit: _settings.cacheLimit,
+                      Container(
+                        key: _equalizerTileKey,
+                        child: _choiceTile(
+                          icon: Icons.equalizer_rounded,
+                          title: 'Equalizer Preset',
+                          value: _settings.equalizerPreset,
+                          options: _config.equalizerPresets,
+                          onChanged: (v) => _update(
+                            _settings = UserSettingsData(
+                              autoplay: _settings.autoplay,
+                              wifiOnlyDownloads: _settings.wifiOnlyDownloads,
+                              normalizeAudio: _settings.normalizeAudio,
+                              crossfade: _settings.crossfade,
+                              equalizerEnabled: _settings.equalizerEnabled,
+                              pushNewReleases: _settings.pushNewReleases,
+                              pushRecommendations:
+                                  _settings.pushRecommendations,
+                              privateSession: _settings.privateSession,
+                              listeningActivityVisible:
+                                  _settings.listeningActivityVisible,
+                              biometricLock: _settings.biometricLock,
+                              crossfadeSeconds: _settings.crossfadeSeconds,
+                              bassLevel: _settings.bassLevel,
+                              midLevel: _settings.midLevel,
+                              trebleLevel: _settings.trebleLevel,
+                              dolbyAtmos: _settings.dolbyAtmos,
+                              highResMusic: _settings.highResMusic,
+                              equalizerPreset: v,
+                              theme: _settings.theme,
+                              language: _settings.language,
+                              cacheLimit: _settings.cacheLimit,
+                            ),
                           ),
                         ),
                       ),
@@ -490,20 +515,163 @@ class _SettingsPageState extends State<SettingsPage> {
     _save();
   }
 
+  Widget _buildGlassDialog({required Widget child}) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withValues(alpha: 0.28),
+                  const Color(0xFFB8D3F0).withValues(alpha: 0.18),
+                  const Color(0xFF9DB5D6).withValues(alpha: 0.14),
+                ],
+              ),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.36),
+                width: 1.1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showChoiceDialog({
+    required String title,
+    required String value,
+    required List<String> options,
+    required ValueChanged<String> onChanged,
+  }) async {
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => _buildGlassDialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: options
+                      .map(
+                        (item) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          onTap: () => Navigator.of(dialogContext).pop(item),
+                          leading: Icon(
+                            item == value
+                                ? Icons.radio_button_checked_rounded
+                                : Icons.radio_button_unchecked_rounded,
+                            color: Colors.white,
+                          ),
+                          title: Text(
+                            item,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.92),
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: Color(0xFF10151D),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (selected != null && selected != value) {
+      onChanged(selected);
+    }
+  }
+
   void _showAbout() {
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(_config.aboutAppName),
-        content: Text(
-          'Version ${_config.aboutVersion}\n\n${_config.aboutDescription}',
+      builder: (dialogContext) => _buildGlassDialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _config.aboutAppName,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Version ${_config.aboutVersion}\n\n'
+              '${_config.aboutDescription}\n\n'
+              'Core Developer: Soumyadeep jana\n'
+              'Email: ${_config.aboutDeveloperEmail}',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.92),
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text(
+                  'OK',
+                  style: TextStyle(
+                    color: Color(0xFF10151D),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
       ),
     );
   }
@@ -582,19 +750,27 @@ class _SettingsPageState extends State<SettingsPage> {
         : (options.isNotEmpty ? options.first : value);
 
     return ListTile(
+      onTap: () => _showChoiceDialog(
+        title: title,
+        value: safeValue,
+        options: options,
+        onChanged: onChanged,
+      ),
       leading: Icon(icon, color: Colors.white),
       title: Text(title, style: const TextStyle(color: Colors.white)),
-      trailing: DropdownButton<String>(
-        value: safeValue,
-        dropdownColor: const Color(0xFF1D2331),
-        style: const TextStyle(color: Colors.white),
-        underline: const SizedBox.shrink(),
-        items: options
-            .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-            .toList(),
-        onChanged: (next) {
-          if (next != null) onChanged(next);
-        },
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            safeValue,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.9)),
+          ),
+          const SizedBox(width: 6),
+          Icon(
+            Icons.expand_more_rounded,
+            color: Colors.white.withValues(alpha: 0.8),
+          ),
+        ],
       ),
     );
   }

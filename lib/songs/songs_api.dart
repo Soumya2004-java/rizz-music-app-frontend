@@ -64,6 +64,39 @@ class SongApi {
     }
   }
 
+  static Future<List<Song>> fetchSongsByArtist(String artistName) async {
+    final normalized = artistName.trim();
+    if (normalized.isEmpty) return fetchSongs();
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collectionGroup('songs')
+          .where('artist', isEqualTo: normalized)
+          .get();
+
+      final songs = await Future.wait(snapshot.docs.map(_songFromDoc));
+      songs.sort(
+        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      );
+
+      if (songs.isNotEmpty) return songs;
+
+      final allSongs = await fetchSongs();
+      return allSongs
+          .where(
+            (song) => song.artist.toLowerCase() == normalized.toLowerCase(),
+          )
+          .toList();
+    } catch (_) {
+      final allSongs = await fetchSongs();
+      return allSongs
+          .where(
+            (song) => song.artist.toLowerCase() == normalized.toLowerCase(),
+          )
+          .toList();
+    }
+  }
+
   static Future<List<Song>> searchSongs(String query) async {
     final songs = await fetchSongs();
     final q = query.trim().toLowerCase();

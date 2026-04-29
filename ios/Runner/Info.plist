@@ -68,26 +68,5 @@
 			<key>NSAllowsArbitraryLoads</key>
 			<true/>
 		</dict>
-		<key>CFBundleURLTypes</key>
-		<array>
-			<dict>
-				<key>CFBundleURLSchemes</key>
-				<array>
-					<string>fbREPLACE_WITH_FACEBOOK_APP_ID</string>
-					<string>com.googleusercontent.apps.1097226990560-gn232sovgrhdfpg1fhsn32ur4a9mqf12</string>
-				</array>
-			</dict>
-		</array>
-		<key>FacebookAppID</key>
-		<string>REPLACE_WITH_FACEBOOK_APP_ID</string>
-		<key>FacebookClientToken</key>
-		<string>REPLACE_WITH_FACEBOOK_CLIENT_TOKEN</string>
-		<key>FacebookDisplayName</key>
-		<string>REPLACE_WITH_FACEBOOK_DISPLAY_NAME</string>
-		<key>LSApplicationQueriesSchemes</key>
-		<array>
-			<string>fbapi</string>
-			<string>fb-messenger-share-api</string>
-		</array>
 	</dict>
 </plist>
