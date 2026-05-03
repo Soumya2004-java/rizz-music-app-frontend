@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../background/gradient_mesh_background.dart';
 import '../music/music_repository.dart';
@@ -8,7 +9,8 @@ import '../songs/albums/album_page.dart';
 import '../songs/songs.dart';
 import '../views/player/player_scrreen.dart';
 import '../views/player/player_session.dart';
-import '../widgets/app_loading_animation.dart';
+import '../widgets/app_cached_image.dart';
+import '../widgets/app_skeletons.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -70,11 +72,19 @@ class _SearchPageState extends State<SearchPage> {
 
   bool get _showSearchResults => _searchController.text.trim().isNotEmpty;
 
+  bool get _isApplePlatform {
+    final platform = Theme.of(context).platform;
+    return platform == TargetPlatform.macOS || platform == TargetPlatform.iOS;
+  }
+
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController()..addListener(_refreshState);
     _searchFocusNode = FocusNode()..addListener(_refreshState);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchFocusNode.requestFocus();
+    });
   }
 
   @override
@@ -104,270 +114,298 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
+  void _focusSearchField() {
+    if (!mounted) return;
+    _searchFocusNode.requestFocus();
+    _searchController.selection = TextSelection.collapsed(
+      offset: _searchController.text.length,
+    );
+  }
+
+  void _clearAndUnfocusSearchField() {
+    if (!mounted) return;
+    _searchController.clear();
+    _searchFocusNode.unfocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.of(context).padding.top;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          const GradientMeshBackground(),
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.14),
-                    Colors.black.withValues(alpha: 0.42),
-                  ],
+    return Shortcuts(
+      shortcuts: <ShortcutActivator, Intent>{
+        SingleActivator(
+          LogicalKeyboardKey.keyK,
+          meta: _isApplePlatform,
+          control: !_isApplePlatform,
+        ): const _FocusSearchIntent(),
+        const SingleActivator(LogicalKeyboardKey.escape):
+            const _ClearSearchIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          _FocusSearchIntent: CallbackAction<_FocusSearchIntent>(
+            onInvoke: (_) {
+              _focusSearchField();
+              return null;
+            },
+          ),
+          _ClearSearchIntent: CallbackAction<_ClearSearchIntent>(
+            onInvoke: (_) {
+              _clearAndUnfocusSearchField();
+              return null;
+            },
+          ),
+        },
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            children: [
+              const GradientMeshBackground(),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.14),
+                        Colors.black.withValues(alpha: 0.42),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            top: -90,
-            right: -70,
-            child: _ambientOrb(size: 300, color: const Color(0x66FF7448)),
-          ),
-          Positioned(
-            top: 140,
-            left: -90,
-            child: _ambientOrb(size: 250, color: const Color(0x664A86FF)),
-          ),
-          IgnorePointer(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(color: Colors.transparent),
-            ),
-          ),
-          AnimatedOpacity(
-            duration: const Duration(milliseconds: 220),
-            opacity: _searchFocusNode.hasFocus ? 1 : 0,
-            child: IgnorePointer(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(color: Colors.black.withValues(alpha: 0.14)),
+              Positioned(
+                top: -90,
+                right: -70,
+                child: _ambientOrb(size: 300, color: const Color(0x66FF7448)),
               ),
-            ),
-          ),
-          SafeArea(
-            top: false,
-            left: false,
-            right: false,
-            bottom: false,
-            child: FutureBuilder<List<Song>>(
-              future: MusicRepository.fetchSongs(),
-              builder: (context, allSongsSnapshot) {
-                if (allSongsSnapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return const Center(child: AppLoadingAnimation());
-                }
-
-                if (allSongsSnapshot.hasError) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(
-                        'Failed to load songs: ${allSongsSnapshot.error}',
-                        style: const TextStyle(color: Colors.white),
-                      ),
+              Positioned(
+                top: 140,
+                left: -90,
+                child: _ambientOrb(size: 250, color: const Color(0x664A86FF)),
+              ),
+              IgnorePointer(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(color: Colors.transparent),
+                ),
+              ),
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 220),
+                opacity: _searchFocusNode.hasFocus ? 1 : 0,
+                child: IgnorePointer(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.14),
                     ),
-                  );
-                }
-
-                final allSongs = allSongsSnapshot.data ?? const <Song>[];
-                final trendingSongs = allSongs.take(8).toList();
-                final quickPicks = allSongs.take(6).toList();
-
-                return CustomScrollView(
-                  physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
                   ),
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  slivers: [
-                    SliverToBoxAdapter(child: SizedBox(height: topInset + 12)),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(
-                        _sidePadding,
-                        0,
-                        _sidePadding,
-                        0,
+                ),
+              ),
+              SafeArea(
+                top: false,
+                left: false,
+                right: false,
+                bottom: false,
+                child: FutureBuilder<List<Song>>(
+                  future: MusicRepository.fetchSongs(),
+                  builder: (context, allSongsSnapshot) {
+                    if (allSongsSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return const AppPageSkeleton();
+                    }
+
+                    if (allSongsSnapshot.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            'Failed to load songs: ${allSongsSnapshot.error}',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final allSongs = allSongsSnapshot.data ?? const <Song>[];
+                    final trendingSongs = allSongs.take(8).toList();
+                    final quickPicks = allSongs.take(6).toList();
+
+                    return CustomScrollView(
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
                       ),
-                      sliver: SliverToBoxAdapter(child: _buildHeader()),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(
-                        _sidePadding,
-                        16,
-                        _sidePadding,
-                        0,
-                      ),
-                      sliver: SliverToBoxAdapter(child: _buildSearchBar()),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(
-                        _sidePadding,
-                        16,
-                        _sidePadding,
-                        0,
-                      ),
-                      sliver: SliverToBoxAdapter(child: _buildMoodRow()),
-                    ),
-                    if (_showSearchResults)
-                      _buildSearchResultsSliver()
-                    else ...[
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(
-                          _sidePadding,
-                          20,
-                          _sidePadding,
-                          8,
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: SizedBox(height: topInset + 12),
                         ),
-                        sliver: SliverToBoxAdapter(
-                          child: _sectionTitle('Trending This Week'),
-                        ),
-                      ),
-                      SliverToBoxAdapter(child: _buildQuickPicks(quickPicks)),
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(
-                          _sidePadding,
-                          24,
-                          _sidePadding,
-                          10,
-                        ),
-                        sliver: SliverToBoxAdapter(
-                          child: _sectionTitle('Browse All'),
-                        ),
-                      ),
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: _sidePadding,
-                        ),
-                        sliver: SliverGrid(
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: 1.05,
-                              ),
-                          delegate: SliverChildBuilderDelegate((
-                            context,
-                            index,
-                          ) {
-                            final genre = _genres[index];
-                            return _buildGenreCard(genre);
-                          }, childCount: _genres.length),
-                        ),
-                      ),
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(
-                          _sidePadding,
-                          22,
-                          _sidePadding,
-                          10,
-                        ),
-                        sliver: SliverToBoxAdapter(
-                          child: _sectionTitle('Recent Searches'),
-                        ),
-                      ),
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: _sidePadding,
-                        ),
-                        sliver: SliverToBoxAdapter(
-                          child: _buildRecentSearches(),
-                        ),
-                      ),
-                      if (trendingSongs.isNotEmpty) ...[
                         SliverPadding(
                           padding: const EdgeInsets.fromLTRB(
                             _sidePadding,
-                            22,
+                            0,
                             _sidePadding,
-                            10,
+                            0,
                           ),
-                          sliver: SliverToBoxAdapter(
-                            child: _sectionTitle('Online Albums'),
-                          ),
+                          sliver: SliverToBoxAdapter(child: _buildHeader()),
                         ),
                         SliverPadding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: _sidePadding,
+                          padding: const EdgeInsets.fromLTRB(
+                            _sidePadding,
+                            16,
+                            _sidePadding,
+                            0,
                           ),
-                          sliver: SliverList.separated(
-                            itemCount: trendingSongs.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 10),
-                            itemBuilder: (context, index) {
-                              final song = trendingSongs[index];
-                              return _buildOnlineAlbumTile(song);
-                            },
-                          ),
+                          sliver: SliverToBoxAdapter(child: _buildSearchBar()),
                         ),
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(
+                            _sidePadding,
+                            16,
+                            _sidePadding,
+                            0,
+                          ),
+                          sliver: SliverToBoxAdapter(child: _buildMoodRow()),
+                        ),
+                        if (_showSearchResults)
+                          _buildSearchResultsSliver(allSongs)
+                        else ...[
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(
+                              _sidePadding,
+                              20,
+                              _sidePadding,
+                              8,
+                            ),
+                            sliver: SliverToBoxAdapter(
+                              child: _sectionTitle('Trending This Week'),
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: _buildQuickPicks(quickPicks),
+                          ),
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(
+                              _sidePadding,
+                              24,
+                              _sidePadding,
+                              10,
+                            ),
+                            sliver: SliverToBoxAdapter(
+                              child: _sectionTitle('Browse All'),
+                            ),
+                          ),
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: _sidePadding,
+                            ),
+                            sliver: SliverGrid(
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    crossAxisSpacing: 12,
+                                    mainAxisSpacing: 12,
+                                    childAspectRatio: 1.05,
+                                  ),
+                              delegate: SliverChildBuilderDelegate((
+                                context,
+                                index,
+                              ) {
+                                final genre = _genres[index];
+                                return _buildGenreCard(genre);
+                              }, childCount: _genres.length),
+                            ),
+                          ),
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(
+                              _sidePadding,
+                              22,
+                              _sidePadding,
+                              10,
+                            ),
+                            sliver: SliverToBoxAdapter(
+                              child: _sectionTitle('Recent Searches'),
+                            ),
+                          ),
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: _sidePadding,
+                            ),
+                            sliver: SliverToBoxAdapter(
+                              child: _buildRecentSearches(),
+                            ),
+                          ),
+                          if (trendingSongs.isNotEmpty) ...[
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(
+                                _sidePadding,
+                                22,
+                                _sidePadding,
+                                10,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: _sectionTitle('Online Albums'),
+                              ),
+                            ),
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: _sidePadding,
+                              ),
+                              sliver: SliverList.separated(
+                                itemCount: trendingSongs.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 10),
+                                itemBuilder: (context, index) {
+                                  final song = trendingSongs[index];
+                                  return _buildOnlineAlbumTile(song);
+                                },
+                              ),
+                            ),
+                          ],
+                        ],
+                        const SliverToBoxAdapter(child: SizedBox(height: 110)),
                       ],
-                    ],
-                    const SliverToBoxAdapter(child: SizedBox(height: 110)),
-                  ],
-                );
-              },
-            ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildSearchResultsSliver() {
+  Widget _buildSearchResultsSliver(List<Song> allSongs) {
+    final query = _normalizeQuery(_searchController.text);
+    final songs = allSongs
+        .where((song) => _matchesSearch(song, query))
+        .toList();
+
     return SliverFillRemaining(
       hasScrollBody: true,
-      child: FutureBuilder<List<Song>>(
-        future: MusicRepository.searchSongs(_searchController.text.trim()),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: AppLoadingAnimation());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Search failed: ${snapshot.error}',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            );
-          }
-
-          final songs = snapshot.data ?? const <Song>[];
-          if (songs.isEmpty) {
-            return const Center(
+      child: songs.isEmpty
+          ? const Center(
               child: Text(
                 'No matching songs found',
                 style: TextStyle(color: Colors.white70),
               ),
-            );
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(
-              _sidePadding,
-              12,
-              _sidePadding,
-              0,
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(
+                _sidePadding,
+                12,
+                _sidePadding,
+                0,
+              ),
+              itemCount: songs.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) =>
+                  _buildResultTile(songs[index], songs),
             ),
-            itemCount: songs.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) =>
-                _buildResultTile(songs[index], songs),
-          );
-        },
-      ),
     );
   }
 
@@ -431,6 +469,8 @@ class _SearchPageState extends State<SearchPage> {
                   controller: _searchController,
                   focusNode: _searchFocusNode,
                   onSubmitted: _onSubmit,
+                  onTapOutside: (_) => _searchFocusNode.unfocus(),
+                  textInputAction: TextInputAction.search,
                   style: const TextStyle(color: Colors.white, fontSize: 16),
                   cursorColor: Colors.white,
                   decoration: InputDecoration(
@@ -448,7 +488,10 @@ class _SearchPageState extends State<SearchPage> {
                     ? const SizedBox.shrink()
                     : IconButton(
                         key: const ValueKey('clear_btn'),
-                        onPressed: _searchController.clear,
+                        onPressed: () {
+                          _searchController.clear();
+                          _focusSearchField();
+                        },
                         icon: Icon(
                           Icons.close_rounded,
                           size: 18,
@@ -846,11 +889,7 @@ class _SearchPageState extends State<SearchPage> {
   Widget _songImage(String? imageUrl) {
     final source = (imageUrl ?? '').trim();
     if (source.startsWith('http://') || source.startsWith('https://')) {
-      return Image.network(
-        source,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _fallbackImage(),
-      );
+      return AppCachedImage(url: source, fit: BoxFit.cover);
     }
     if (source.isNotEmpty) {
       return Image.asset(
@@ -905,4 +944,26 @@ class _SearchPageState extends State<SearchPage> {
       ),
     );
   }
+
+  String _normalizeQuery(String value) {
+    return value.trim().toLowerCase();
+  }
+
+  bool _matchesSearch(Song song, String query) {
+    if (query.isEmpty) return true;
+    final title = song.title.toLowerCase();
+    final artist = song.artist.toLowerCase();
+    final album = song.album.toLowerCase();
+    return title.contains(query) ||
+        artist.contains(query) ||
+        album.contains(query);
+  }
+}
+
+class _FocusSearchIntent extends Intent {
+  const _FocusSearchIntent();
+}
+
+class _ClearSearchIntent extends Intent {
+  const _ClearSearchIntent();
 }
