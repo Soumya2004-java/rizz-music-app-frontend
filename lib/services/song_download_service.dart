@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:path_provider/path_provider.dart';
 
@@ -21,6 +22,8 @@ class SongDownloadService {
     final file = File('${songsDir.path}${Platform.pathSeparator}$fileName');
 
     if (await file.exists()) {
+      final localCoverPath = await _downloadCoverIfAvailable(song, songsDir);
+      await _writeSongMetadata(file, song, localCoverPath: localCoverPath);
       return DownloadResult(file: file, alreadyExists: true);
     }
 
@@ -39,6 +42,8 @@ class SongDownloadService {
         );
       }
       await response.pipe(file.openWrite());
+      final localCoverPath = await _downloadCoverIfAvailable(song, songsDir);
+      await _writeSongMetadata(file, song, localCoverPath: localCoverPath);
       return DownloadResult(file: file, alreadyExists: false);
     } finally {
       client.close(force: true);
@@ -69,15 +74,22 @@ class SongDownloadService {
     return safe.isEmpty ? 'track' : safe;
   }
 
-  static String _extensionFromUrl(String audioUrl) {
+  static String _extensionFromUrl(
+    String audioUrl, {
+    String defaultExt = '.mp3',
+  }) {
     final uri = Uri.tryParse(audioUrl);
-    if (uri == null) return '.mp3';
+    if (uri == null) return defaultExt;
     final path = uri.path.toLowerCase();
+    if (path.endsWith('.png')) return '.png';
+    if (path.endsWith('.jpg')) return '.jpg';
+    if (path.endsWith('.jpeg')) return '.jpeg';
+    if (path.endsWith('.webp')) return '.webp';
     if (path.endsWith('.m4a')) return '.m4a';
     if (path.endsWith('.aac')) return '.aac';
     if (path.endsWith('.wav')) return '.wav';
     if (path.endsWith('.ogg')) return '.ogg';
-    return '.mp3';
+    return defaultExt;
   }
 
   static Future<List<DownloadedSong>> listDownloadedSongs() async {
@@ -88,19 +100,16 @@ class SongDownloadService {
     }
 
     final entries = await songsDir.list().toList();
-    final files =
-        entries.whereType<File>().where((file) {
-          final name = file.path.toLowerCase();
-          return name.endsWith('.mp3') ||
-              name.endsWith('.m4a') ||
-              name.endsWith('.aac') ||
-              name.endsWith('.wav') ||
-              name.endsWith('.ogg');
-        }).toList();
+    final files = entries.whereType<File>().where((file) {
+      final name = file.path.toLowerCase();
+      return name.endsWith('.mp3') ||
+          name.endsWith('.m4a') ||
+          name.endsWith('.aac') ||
+          name.endsWith('.wav') ||
+          name.endsWith('.ogg');
+    }).toList();
 
-    files.sort(
-      (a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()),
-    );
+    files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
 
     return files.map(_toDownloadedSong).toList(growable: false);
   }
@@ -111,17 +120,107 @@ class SongDownloadService {
         : file.path;
     final withoutExt = fileName.replaceFirst(RegExp(r'\.[^.]+$'), '');
     final splitIndex = withoutExt.lastIndexOf('_');
-    final rawTitle = splitIndex > 0 ? withoutExt.substring(0, splitIndex) : withoutExt;
-    final rawArtist = splitIndex > 0 ? withoutExt.substring(splitIndex + 1) : 'Unknown artist';
+    final rawTitle = splitIndex > 0
+        ? withoutExt.substring(0, splitIndex)
+        : withoutExt;
+    final rawArtist = splitIndex > 0
+        ? withoutExt.substring(splitIndex + 1)
+        : 'Unknown artist';
     final title = rawTitle.replaceAll('_', ' ').trim();
     final artist = rawArtist.replaceAll('_', ' ').trim();
     final bytes = file.lengthSync();
+    final metadata = _readSongMetadata(file);
     return DownloadedSong(
-      title: title.isEmpty ? 'Unknown title' : title,
-      artist: artist.isEmpty ? 'Unknown artist' : artist,
+      title: metadata?.title ?? (title.isEmpty ? 'Unknown title' : title),
+      artist: metadata?.artist ?? (artist.isEmpty ? 'Unknown artist' : artist),
       filePath: file.path,
       sizeLabel: _formatBytes(bytes),
+      coverUrl: metadata?.coverUrl,
+      localCoverPath: metadata?.localCoverPath,
     );
+  }
+
+  static Future<void> _writeSongMetadata(
+    File audioFile,
+    Song song, {
+    String? localCoverPath,
+  }) async {
+    try {
+      final metadataFile = File(_metadataPathFor(audioFile.path));
+      final payload = <String, String>{
+        'title': song.title,
+        'artist': song.artist,
+        'coverUrl': song.imageUrl ?? '',
+        'localCoverPath': localCoverPath ?? '',
+      };
+      await metadataFile.writeAsString(jsonEncode(payload), flush: true);
+    } catch (_) {
+      // Metadata write failures should not block audio download.
+    }
+  }
+
+  static _SongMetadata? _readSongMetadata(File audioFile) {
+    try {
+      final metadataFile = File(_metadataPathFor(audioFile.path));
+      if (!metadataFile.existsSync()) return null;
+      final raw = metadataFile.readAsStringSync();
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      return _SongMetadata(
+        title: _stringOrNull(decoded['title']),
+        artist: _stringOrNull(decoded['artist']),
+        coverUrl: _stringOrNull(decoded['coverUrl']),
+        localCoverPath: _stringOrNull(decoded['localCoverPath']),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<String?> _downloadCoverIfAvailable(
+    Song song,
+    Directory songsDir,
+  ) async {
+    final raw = (song.imageUrl ?? '').trim();
+    if (raw.isEmpty) return null;
+
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      final uri = Uri.tryParse(raw);
+      if (uri == null) return null;
+      final ext = _extensionFromUrl(raw, defaultExt: '.jpg');
+      final coverFileName =
+          '${_safeFilePart(song.title)}_${_safeFilePart(song.artist)}_cover$ext';
+      final coverFile = File(
+        '${songsDir.path}${Platform.pathSeparator}$coverFileName',
+      );
+      if (await coverFile.exists()) return coverFile.path;
+
+      final client = HttpClient();
+      try {
+        final request = await client.getUrl(uri);
+        final response = await request.close();
+        if (response.statusCode != HttpStatus.ok) return null;
+        await response.pipe(coverFile.openWrite());
+        return coverFile.path;
+      } catch (_) {
+        return null;
+      } finally {
+        client.close(force: true);
+      }
+    }
+
+    // Asset path already exists in app bundle.
+    return raw;
+  }
+
+  static String _metadataPathFor(String audioFilePath) {
+    return audioFilePath.replaceFirst(RegExp(r'\.[^.]+$'), '.json');
+  }
+
+  static String? _stringOrNull(dynamic value) {
+    if (value is! String) return null;
+    final normalized = value.trim();
+    return normalized.isEmpty ? null : normalized;
   }
 
   static String _formatBytes(int bytes) {
@@ -157,10 +256,28 @@ class DownloadedSong {
     required this.artist,
     required this.filePath,
     required this.sizeLabel,
+    this.coverUrl,
+    this.localCoverPath,
   });
 
   final String title;
   final String artist;
   final String filePath;
   final String sizeLabel;
+  final String? coverUrl;
+  final String? localCoverPath;
+}
+
+class _SongMetadata {
+  const _SongMetadata({
+    this.title,
+    this.artist,
+    this.coverUrl,
+    this.localCoverPath,
+  });
+
+  final String? title;
+  final String? artist;
+  final String? coverUrl;
+  final String? localCoverPath;
 }

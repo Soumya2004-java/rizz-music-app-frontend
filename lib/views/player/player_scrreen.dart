@@ -29,6 +29,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   late final AnimationController _vibeController;
   StreamSubscription<PlayerSnapshot>? _sessionSub;
   bool _isDownloading = false;
+  double? _pendingSeekMs;
 
   @override
   void initState() {
@@ -121,6 +122,33 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }
+  }
+
+  Song? _activeSongForControls() {
+    return _session.currentSong ?? widget.song;
+  }
+
+  void _ensureSessionHasActiveSong() {
+    final song = _activeSongForControls();
+    if (song == null) return;
+    if (_session.currentSong == null) {
+      _session.playSong(song, autoPlay: false);
+    }
+  }
+
+  void _handlePlayPause() {
+    _ensureSessionHasActiveSong();
+    _session.togglePlayPause();
+  }
+
+  void _handlePrevious() {
+    _ensureSessionHasActiveSong();
+    _session.playPrevious();
+  }
+
+  void _handleNext() {
+    _ensureSessionHasActiveSong();
+    _session.playNext();
   }
 
   void _showSnack(String text) {
@@ -963,13 +991,15 @@ class _PlayerScreenState extends State<PlayerScreen>
     final isShuffleOn = _session.isShuffleEnabled;
     final repeatMode = _session.repeatMode;
     final isLight = Theme.of(context).brightness == Brightness.light;
-    final canGoNext = _session.hasNextTrack;
-    final canGoPrevious =
-        _session.hasPreviousTrack || position > const Duration(seconds: 3);
+    final hasActiveSong = song != null;
+    final canGoNext = hasActiveSong;
+    final canGoPrevious = hasActiveSong;
     final hasDuration = duration > Duration.zero;
     final sliderMax = hasDuration ? duration.inMilliseconds.toDouble() : 1.0;
+    final sliderSourceValue =
+        _pendingSeekMs ?? position.inMilliseconds.toDouble();
     final sliderValue = hasDuration
-        ? position.inMilliseconds.toDouble().clamp(0, sliderMax).toDouble()
+        ? sliderSourceValue.clamp(0, sliderMax).toDouble()
         : 0.0;
 
     return PopScope(
@@ -1161,9 +1191,20 @@ class _PlayerScreenState extends State<PlayerScreen>
                             max: sliderMax,
                             onChanged: hasDuration
                                 ? (value) {
+                                    setState(() {
+                                      _pendingSeekMs = value;
+                                    });
+                                  }
+                                : null,
+                            onChangeEnd: hasDuration
+                                ? (value) {
                                     _session.seek(
                                       Duration(milliseconds: value.round()),
                                     );
+                                    if (!mounted) return;
+                                    setState(() {
+                                      _pendingSeekMs = null;
+                                    });
                                   }
                                 : null,
                           ),
@@ -1233,9 +1274,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                               ),
                             ),
                             IconButton(
-                              onPressed: canGoPrevious
-                                  ? _session.playPrevious
-                                  : null,
+                              onPressed: canGoPrevious ? _handlePrevious : null,
                               icon: Icon(
                                 Icons.skip_previous_rounded,
                                 color: canGoPrevious
@@ -1249,7 +1288,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                               ),
                             ),
                             GestureDetector(
-                              onTap: _session.togglePlayPause,
+                              onTap: _handlePlayPause,
                               child: Container(
                                 height: 84,
                                 width: 84,
@@ -1267,7 +1306,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                               ),
                             ),
                             IconButton(
-                              onPressed: canGoNext ? _session.playNext : null,
+                              onPressed: canGoNext ? _handleNext : null,
                               icon: Icon(
                                 Icons.skip_next_rounded,
                                 color: canGoNext

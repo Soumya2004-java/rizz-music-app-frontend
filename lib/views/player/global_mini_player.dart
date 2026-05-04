@@ -193,16 +193,10 @@ class GlobalMiniPlayerOverlay extends StatelessWidget {
                                         ),
                                         padding: EdgeInsets.zero,
                                         visualDensity: VisualDensity.compact,
-                                        onPressed: data.hasPreviousTrack
-                                            ? session.playPrevious
-                                            : null,
+                                        onPressed: session.playPrevious,
                                         icon: Icon(
                                           Icons.skip_previous_rounded,
-                                          color: data.hasPreviousTrack
-                                              ? const Color(0xFF12141A)
-                                              : const Color(
-                                                  0xFF12141A,
-                                                ).withValues(alpha: 0.35),
+                                          color: const Color(0xFF12141A),
                                           size: 24,
                                         ),
                                       ),
@@ -229,16 +223,10 @@ class GlobalMiniPlayerOverlay extends StatelessWidget {
                                         ),
                                         padding: EdgeInsets.zero,
                                         visualDensity: VisualDensity.compact,
-                                        onPressed: data.hasNextTrack
-                                            ? session.playNext
-                                            : null,
+                                        onPressed: session.playNext,
                                         icon: Icon(
                                           Icons.skip_next_rounded,
-                                          color: data.hasNextTrack
-                                              ? const Color(0xFF12141A)
-                                              : const Color(
-                                                  0xFF12141A,
-                                                ).withValues(alpha: 0.35),
+                                          color: const Color(0xFF12141A),
                                           size: 24,
                                         ),
                                       ),

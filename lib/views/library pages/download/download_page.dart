@@ -1,9 +1,14 @@
 import 'dart:ui';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
 import '../../../background/gradient_mesh_background.dart';
 import '../../../services/song_download_service.dart';
+import '../../../songs/songs.dart';
+import '../../player/player_scrreen.dart';
+import '../../player/player_session.dart';
+import '../../../widgets/app_cached_image.dart';
 import '../../../widgets/app_skeletons.dart';
 
 class DownloadPage extends StatefulWidget {
@@ -89,69 +94,65 @@ class _DownloadPageState extends State<DownloadPage> {
     );
   }
 
-  Widget _songCard(DownloadedSong song) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.17)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: Container(
-                    color: Colors.white.withValues(alpha: 0.16),
-                    child: const Icon(
-                      Icons.download_done_rounded,
-                      color: Colors.white,
-                      size: 34,
+  Widget _songCard(DownloadedSong song, List<DownloadedSong> allDownloads) {
+    return GestureDetector(
+      onTap: () => _playDownloadedSong(song, allDownloads),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.17)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: AspectRatio(aspectRatio: 1, child: _coverImage(song)),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  song.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  song.artist,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.72),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _metaPill(
+                        Icons.sd_storage_rounded,
+                        song.sizeLabel,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _metaPill(Icons.music_note_rounded, 'Offline'),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                song.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                song.artist,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.72),
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 7),
-              Row(
-                children: [
-                  Expanded(
-                    child: _metaPill(Icons.sd_storage_rounded, song.sizeLabel),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _metaPill(Icons.music_note_rounded, '1 track'),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -186,6 +187,79 @@ class _DownloadPageState extends State<DownloadPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _coverImage(DownloadedSong song) {
+    final localCoverPath = (song.localCoverPath ?? '').trim();
+    if (localCoverPath.isNotEmpty &&
+        !localCoverPath.startsWith('assets/') &&
+        File(localCoverPath).existsSync()) {
+      return Image.file(
+        File(localCoverPath),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _fallbackCover(),
+      );
+    }
+
+    if (localCoverPath.startsWith('assets/')) {
+      return Image.asset(
+        localCoverPath,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _fallbackCover(),
+      );
+    }
+
+    final cover = (song.coverUrl ?? '').trim();
+    if (cover.startsWith('http://') || cover.startsWith('https://')) {
+      return AppCachedImage(url: cover, fit: BoxFit.cover);
+    }
+    if (cover.isNotEmpty) {
+      return Image.asset(
+        cover,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _fallbackCover(),
+      );
+    }
+    return _fallbackCover();
+  }
+
+  Widget _fallbackCover() {
+    return Container(
+      color: Colors.white.withValues(alpha: 0.16),
+      child: const Icon(
+        Icons.download_done_rounded,
+        color: Colors.white,
+        size: 34,
+      ),
+    );
+  }
+
+  Song _toPlayableSong(DownloadedSong song) {
+    return Song(
+      id: 'download_${song.filePath.hashCode}',
+      title: song.title,
+      artist: song.artist,
+      album: 'Downloaded',
+      audioUrl: song.filePath,
+      imageUrl: (song.localCoverPath ?? '').trim().isNotEmpty
+          ? song.localCoverPath
+          : song.coverUrl,
+    );
+  }
+
+  void _playDownloadedSong(
+    DownloadedSong song,
+    List<DownloadedSong> allDownloads,
+  ) {
+    final queue = allDownloads.map(_toPlayableSong).toList(growable: false);
+    final current = _toPlayableSong(song);
+    final session = PlayerSession.instance;
+    session.setQueue(queue, currentSong: current);
+    session.playSong(current);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PlayerScreen(song: current)),
     );
   }
 
@@ -312,7 +386,8 @@ class _DownloadPageState extends State<DownloadPage> {
                               childAspectRatio: 0.56,
                             ),
                         delegate: SliverChildBuilderDelegate(
-                          (context, index) => _songCard(downloads[index]),
+                          (context, index) =>
+                              _songCard(downloads[index], downloads),
                           childCount: downloads.length,
                         ),
                       ),

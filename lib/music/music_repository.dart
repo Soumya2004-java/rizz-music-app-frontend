@@ -84,6 +84,12 @@ class MusicRepository {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
   static List<AlbumSummary>? _albumsMemoryCache;
   static Future<List<AlbumSummary>>? _albumsInFlight;
+  static List<ArtistSummary>? _artistsMemoryCache;
+  static Future<List<ArtistSummary>>? _artistsInFlight;
+  static List<PlaylistSummary>? _playlistsMemoryCache;
+  static Future<List<PlaylistSummary>>? _playlistsInFlight;
+  static LibraryStats? _libraryStatsMemoryCache;
+  static Future<LibraryStats>? _libraryStatsInFlight;
 
   static Future<List<Song>> fetchSongs() => SongApi.fetchSongs();
 
@@ -91,6 +97,26 @@ class MusicRepository {
       SongApi.searchSongs(query);
 
   static Future<List<ArtistSummary>> fetchArtists() async {
+    final cached = _artistsMemoryCache;
+    if (cached != null && cached.isNotEmpty) return cached;
+
+    final inFlight = _artistsInFlight;
+    if (inFlight != null) return inFlight;
+
+    final request = _computeArtists();
+    _artistsInFlight = request;
+    try {
+      final artists = await request;
+      if (artists.isNotEmpty) {
+        _artistsMemoryCache = artists;
+      }
+      return artists;
+    } finally {
+      _artistsInFlight = null;
+    }
+  }
+
+  static Future<List<ArtistSummary>> _computeArtists() async {
     final songs = await fetchSongs();
     final map = <String, _ArtistAccumulator>{};
 
@@ -172,6 +198,26 @@ class MusicRepository {
   }
 
   static Future<List<PlaylistSummary>> fetchPlaylists() async {
+    final cached = _playlistsMemoryCache;
+    if (cached != null && cached.isNotEmpty) return cached;
+
+    final inFlight = _playlistsInFlight;
+    if (inFlight != null) return inFlight;
+
+    final request = _computePlaylists();
+    _playlistsInFlight = request;
+    try {
+      final playlists = await request;
+      if (playlists.isNotEmpty) {
+        _playlistsMemoryCache = playlists;
+      }
+      return playlists;
+    } finally {
+      _playlistsInFlight = null;
+    }
+  }
+
+  static Future<List<PlaylistSummary>> _computePlaylists() async {
     try {
       final snapshot = await _db.collectionGroup('playlists').get();
       final playlists =
@@ -202,6 +248,24 @@ class MusicRepository {
   }
 
   static Future<LibraryStats> fetchLibraryStats() async {
+    final cached = _libraryStatsMemoryCache;
+    if (cached != null) return cached;
+
+    final inFlight = _libraryStatsInFlight;
+    if (inFlight != null) return inFlight;
+
+    final request = _computeLibraryStats();
+    _libraryStatsInFlight = request;
+    try {
+      final stats = await request;
+      _libraryStatsMemoryCache = stats;
+      return stats;
+    } finally {
+      _libraryStatsInFlight = null;
+    }
+  }
+
+  static Future<LibraryStats> _computeLibraryStats() async {
     final songs = await fetchSongs();
     final albums = <String>{};
     final artists = <String>{};
@@ -221,6 +285,17 @@ class MusicRepository {
       artists: artists.length,
       playlists: playlists.length,
     );
+  }
+
+  static void clearCaches() {
+    _albumsMemoryCache = null;
+    _albumsInFlight = null;
+    _artistsMemoryCache = null;
+    _artistsInFlight = null;
+    _playlistsMemoryCache = null;
+    _playlistsInFlight = null;
+    _libraryStatsMemoryCache = null;
+    _libraryStatsInFlight = null;
   }
 }
 

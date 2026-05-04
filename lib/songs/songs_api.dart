@@ -13,6 +13,10 @@ class SongApi {
   );
   static List<Song>? _songsMemoryCache;
   static Future<List<Song>>? _songsInFlight;
+  static final Map<String, String> _resolvedStorageUrlCache =
+      <String, String>{};
+  static final Map<String, Future<String?>> _resolvedStorageUrlInFlight =
+      <String, Future<String?>>{};
 
   static Future<List<Song>> fetchSongs() async {
     final cached = _songsMemoryCache;
@@ -46,7 +50,9 @@ class SongApi {
           .collectionGroup('songs')
           .get(const GetOptions(source: Source.cache));
       if (cacheSnapshot.docs.isNotEmpty) {
-        final cachedSongs = await Future.wait(cacheSnapshot.docs.map(_songFromDoc));
+        final cachedSongs = await Future.wait(
+          cacheSnapshot.docs.map(_songFromDoc),
+        );
         cachedSongs.sort(
           (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
         );
@@ -216,8 +222,33 @@ class SongApi {
     final storagePath = _normalizedString(path);
 
     if (storagePath != null) {
+      final cached = _resolvedStorageUrlCache[storagePath];
+      if (cached != null && cached.isNotEmpty) {
+        return cached;
+      }
+
+      final inFlight = _resolvedStorageUrlInFlight[storagePath];
+      if (inFlight != null) {
+        return inFlight;
+      }
+
+      final request = () async {
+        try {
+          final value = await FirebaseStorage.instance
+              .ref(storagePath)
+              .getDownloadURL();
+          _resolvedStorageUrlCache[storagePath] = value;
+          return value;
+        } catch (_) {
+          return null;
+        } finally {
+          _resolvedStorageUrlInFlight.remove(storagePath);
+        }
+      }();
+      _resolvedStorageUrlInFlight[storagePath] = request;
+
       try {
-        return await FirebaseStorage.instance.ref(storagePath).getDownloadURL();
+        return await request;
       } catch (_) {
         return null;
       }

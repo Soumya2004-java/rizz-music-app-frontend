@@ -36,7 +36,7 @@ class HomePage extends StatelessWidget {
           ),
           SafeArea(
             top: false,
-            bottom: true,
+            bottom: false,
             child: FutureBuilder<List<AlbumSummary>>(
               future: MusicRepository.fetchAlbums(),
               builder: (context, snapshot) {
@@ -102,35 +102,32 @@ class HomePage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SliverPadding(
-                      padding: const EdgeInsets.only(bottom: 118),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate.fixed([
-                          _horizontalSection(
-                            context: context,
-                            title: 'Made for You',
-                            subtitle: 'Curated from your recent favorites',
-                            albums: albums.take(10).toList(),
-                            onSeeAll: () => _openAllAlbums(context),
-                          ),
-                          const SizedBox(height: 14),
-                          _horizontalSection(
-                            context: context,
-                            title: 'Popular Right Now',
-                            subtitle: 'Trending picks across your library',
-                            albums: albums.skip(4).take(10).toList(),
-                            onSeeAll: () => _openAllAlbums(context),
-                          ),
-                          const SizedBox(height: 14),
-                          _horizontalSection(
-                            context: context,
-                            title: 'Browse Albums',
-                            subtitle: 'Dive into full collections',
-                            albums: albums,
-                            onSeeAll: () => _openAllAlbums(context),
-                          ),
-                        ]),
-                      ),
+                    SliverList(
+                      delegate: SliverChildListDelegate.fixed([
+                        _horizontalSection(
+                          context: context,
+                          title: 'Made for You',
+                          subtitle: 'Curated from your recent favorites',
+                          albums: albums.take(10).toList(),
+                          onSeeAll: () => _openAllAlbums(context),
+                        ),
+                        const SizedBox(height: 14),
+                        _horizontalSection(
+                          context: context,
+                          title: 'Popular Right Now',
+                          subtitle: 'Trending picks across your library',
+                          albums: albums.skip(4).take(10).toList(),
+                          onSeeAll: () => _openAllAlbums(context),
+                        ),
+                        const SizedBox(height: 14),
+                        _horizontalSection(
+                          context: context,
+                          title: 'Browse Albums',
+                          subtitle: 'Dive into full collections',
+                          albums: albums,
+                          onSeeAll: () => _openAllAlbums(context),
+                        ),
+                      ]),
                     ),
                   ],
                 );

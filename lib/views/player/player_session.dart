@@ -19,6 +19,8 @@ class LyricLine {
 enum RepeatMode { off, all, one }
 
 class PlayerSession {
+  static const Duration _audioOpTimeout = Duration(seconds: 10);
+
   PlayerSession._() {
     _audioPlayer.setVolume(_volume);
     _initDeviceMonitoring();
@@ -76,6 +78,8 @@ class PlayerSession {
   Duration _duration = Duration.zero;
   double _bpm = 108;
   Timer? _ticker;
+  bool _isTrackActionInProgress = false;
+  int _trackActionToken = 0;
 
   Song? get currentSong => _currentSong;
   bool get isPlaying => _isPlaying;
@@ -84,6 +88,7 @@ class PlayerSession {
   Duration get duration => _duration;
   double get bpm => _bpm;
   bool get hasTrack => _currentSong != null;
+  bool get isTrackActionInProgress => _isTrackActionInProgress;
   bool get isShuffleEnabled => _isShuffleEnabled;
   RepeatMode get repeatMode => _repeatMode;
   String get activeDevice => _activeDevice;
@@ -100,9 +105,10 @@ class PlayerSession {
   }
 
   int get _currentQueueIndex {
-    final id = _currentSong?.id;
-    if (id == null) return -1;
-    return _queue.indexWhere((song) => song.id == id);
+    final current = _currentSong;
+    if (current == null) return -1;
+    final currentKey = _songKey(current);
+    return _queue.indexWhere((song) => _songKey(song) == currentKey);
   }
 
   bool get hasPreviousTrack {
@@ -142,6 +148,7 @@ class PlayerSession {
     position: _position,
     duration: _duration,
     bpm: _bpm,
+    isTrackActionInProgress: _isTrackActionInProgress,
   );
 
   void setQueue(List<Song> songs, {Song? currentSong}) {
@@ -160,22 +167,25 @@ class PlayerSession {
       return;
     }
 
-    final index = _queue.indexWhere((song) => song.id == selected.id);
+    final selectedKey = _songKey(selected);
+    final index = _queue.indexWhere((song) => _songKey(song) == selectedKey);
     if (index < 0) {
       _queue.insert(0, selected);
     }
     _emit();
   }
 
-  void playSong(
+  Future<void> playSong(
     Song song, {
     bool autoPlay = true,
     bool preserveMinimizedState = false,
-  }) {
-    final isNewSong = _currentSong?.id != song.id;
+  }) async {
+    final actionToken = ++_trackActionToken;
+    final isNewSong = _songKey(_currentSong) != _songKey(song);
 
     _currentSong = song;
-    if (_queue.indexWhere((item) => item.id == song.id) < 0) {
+    final songKey = _songKey(song);
+    if (_queue.indexWhere((item) => _songKey(item) == songKey) < 0) {
       _queue.add(song);
     }
     _duration = _durationForSong(song);
@@ -190,11 +200,19 @@ class PlayerSession {
 
     if (song.hasRemoteAudio) {
       _stopTicker();
-      _playRemoteSong(song, autoPlay: autoPlay, resetPosition: isNewSong);
+      _isTrackActionInProgress = true;
+      _emit();
+      await _playAudioSong(
+        song,
+        autoPlay: autoPlay,
+        resetPosition: isNewSong,
+        actionToken: actionToken,
+      );
       return;
     }
 
-    _audioPlayer.stop();
+    unawaited(_audioPlayer.stop());
+    _isTrackActionInProgress = false;
     _isPlaying = autoPlay;
     if (_isPlaying) {
       _startTicker();
@@ -204,23 +222,27 @@ class PlayerSession {
     _emit();
   }
 
-  Future<void> _playRemoteSong(
+  Future<void> _playAudioSong(
     Song song, {
     required bool autoPlay,
     required bool resetPosition,
+    required int actionToken,
   }) async {
     try {
-      final uri = Uri.parse(song.audioUrl!);
+      final uri = _audioUriForSong(song.audioUrl!);
+      if (actionToken != _trackActionToken) return;
       if (resetPosition) {
-        await _audioPlayer.setAudioSource(
-          AudioSource.uri(uri, tag: _mediaItemForSong(song)),
-        );
+        await _audioPlayer
+            .setAudioSource(AudioSource.uri(uri, tag: _mediaItemForSong(song)))
+            .timeout(_audioOpTimeout);
       }
+      if (actionToken != _trackActionToken) return;
       if (!resetPosition && _audioPlayer.audioSource == null) {
-        await _audioPlayer.setAudioSource(
-          AudioSource.uri(uri, tag: _mediaItemForSong(song)),
-        );
+        await _audioPlayer
+            .setAudioSource(AudioSource.uri(uri, tag: _mediaItemForSong(song)))
+            .timeout(_audioOpTimeout);
       }
+      if (actionToken != _trackActionToken) return;
 
       final loadedDuration = _audioPlayer.duration;
       if (loadedDuration != null) {
@@ -228,22 +250,46 @@ class PlayerSession {
       }
 
       if (autoPlay) {
-        await _audioPlayer.play();
+        await _audioPlayer.play().timeout(_audioOpTimeout);
         _isPlaying = true;
       } else {
-        await _audioPlayer.pause();
+        await _audioPlayer.pause().timeout(_audioOpTimeout);
         _isPlaying = false;
       }
+      if (actionToken != _trackActionToken) return;
 
       _emit();
     } catch (_) {
-      // Fallback to simulated progress if remote source cannot load.
+      if (actionToken != _trackActionToken) return;
+      // Fallback to simulated progress if source cannot load.
       _isPlaying = autoPlay;
       if (_isPlaying) {
         _startTicker();
       }
       _emit();
+    } finally {
+      if (actionToken == _trackActionToken) {
+        _isTrackActionInProgress = false;
+        _emit();
+      }
     }
+  }
+
+  Uri _audioUriForSong(String source) {
+    final normalized = source.trim();
+    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+      return Uri.parse(normalized);
+    }
+    return Uri.file(normalized);
+  }
+
+  String _songKey(Song? song) {
+    if (song == null) return '';
+    final id = song.id.trim();
+    if (id.isNotEmpty) return 'id:$id';
+    final audio = (song.audioUrl ?? '').trim();
+    if (audio.isNotEmpty) return 'audio:$audio';
+    return 'meta:${song.title.trim()}|${song.artist.trim()}|${song.album.trim()}';
   }
 
   void togglePlayPause() {
@@ -451,10 +497,12 @@ class PlayerSession {
   }
 
   void playNext() {
+    if (_currentSong == null) return;
     _playAdjacent(direction: 1);
   }
 
   void playPrevious() {
+    if (_currentSong == null) return;
     if (_position > const Duration(seconds: 3)) {
       seek(Duration.zero);
       return;
@@ -708,9 +756,9 @@ class PlayerSession {
       return;
     }
 
-    final previousId = _currentSong?.id;
+    final previousKey = _songKey(_currentSong);
     playNext();
-    if (_currentSong?.id == previousId) {
+    if (_songKey(_currentSong) == previousKey) {
       _isPlaying = false;
       _position = _duration;
       _stopTicker();
@@ -807,6 +855,7 @@ class PlayerSnapshot {
   final Duration position;
   final Duration duration;
   final double bpm;
+  final bool isTrackActionInProgress;
 
   const PlayerSnapshot({
     required this.currentSong,
@@ -821,5 +870,6 @@ class PlayerSnapshot {
     required this.position,
     required this.duration,
     required this.bpm,
+    required this.isTrackActionInProgress,
   });
 }
