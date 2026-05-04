@@ -24,6 +24,7 @@ class _SearchPageState extends State<SearchPage> {
 
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
+  late final Future<List<Song>> _allSongsFuture;
 
   String _selectedMood = 'Trending';
   final List<String> _recentSearches = [
@@ -77,11 +78,15 @@ class _SearchPageState extends State<SearchPage> {
     return platform == TargetPlatform.macOS || platform == TargetPlatform.iOS;
   }
 
+  ScrollBehavior get _searchScrollBehavior => const MaterialScrollBehavior()
+      .copyWith(dragDevices: {...PointerDeviceKind.values});
+
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController()..addListener(_refreshState);
     _searchFocusNode = FocusNode()..addListener(_refreshState);
+    _allSongsFuture = MusicRepository.fetchSongs();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _searchFocusNode.requestFocus();
     });
@@ -209,136 +214,121 @@ class _SearchPageState extends State<SearchPage> {
                 left: false,
                 right: false,
                 bottom: false,
-                child: FutureBuilder<List<Song>>(
-                  future: MusicRepository.fetchSongs(),
-                  builder: (context, allSongsSnapshot) {
-                    if (allSongsSnapshot.connectionState ==
-                        ConnectionState.waiting) {
-                      return const AppPageSkeleton();
-                    }
+                child: ScrollConfiguration(
+                  behavior: _searchScrollBehavior,
+                  child: FutureBuilder<List<Song>>(
+                    future: _allSongsFuture,
+                    builder: (context, allSongsSnapshot) {
+                      if (allSongsSnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const SearchPageSkeleton();
+                      }
 
-                    if (allSongsSnapshot.hasError) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Text(
-                            'Failed to load songs: ${allSongsSnapshot.error}',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      );
-                    }
-
-                    final allSongs = allSongsSnapshot.data ?? const <Song>[];
-                    final trendingSongs = allSongs.take(8).toList();
-                    final quickPicks = allSongs.take(6).toList();
-
-                    return CustomScrollView(
-                      physics: const BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics(),
-                      ),
-                      keyboardDismissBehavior:
-                          ScrollViewKeyboardDismissBehavior.onDrag,
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: SizedBox(height: topInset + 12),
-                        ),
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(
-                            _sidePadding,
-                            0,
-                            _sidePadding,
-                            0,
-                          ),
-                          sliver: SliverToBoxAdapter(child: _buildHeader()),
-                        ),
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(
-                            _sidePadding,
-                            16,
-                            _sidePadding,
-                            0,
-                          ),
-                          sliver: SliverToBoxAdapter(child: _buildSearchBar()),
-                        ),
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(
-                            _sidePadding,
-                            16,
-                            _sidePadding,
-                            0,
-                          ),
-                          sliver: SliverToBoxAdapter(child: _buildMoodRow()),
-                        ),
-                        if (_showSearchResults)
-                          _buildSearchResultsSliver(allSongs)
-                        else ...[
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(
-                              _sidePadding,
-                              20,
-                              _sidePadding,
-                              8,
-                            ),
-                            sliver: SliverToBoxAdapter(
-                              child: _sectionTitle('Trending This Week'),
+                      if (allSongsSnapshot.hasError) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              'Failed to load songs: ${allSongsSnapshot.error}',
+                              style: const TextStyle(color: Colors.white),
                             ),
                           ),
+                        );
+                      }
+
+                      final allSongs = allSongsSnapshot.data ?? const <Song>[];
+                      final trendingSongs = allSongs.take(8).toList();
+                      final quickPicks = allSongs.take(6).toList();
+
+                      return CustomScrollView(
+                        primary: true,
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        slivers: [
                           SliverToBoxAdapter(
-                            child: _buildQuickPicks(quickPicks),
+                            child: SizedBox(height: topInset + 12),
                           ),
                           SliverPadding(
                             padding: const EdgeInsets.fromLTRB(
                               _sidePadding,
-                              24,
+                              0,
                               _sidePadding,
-                              10,
+                              0,
                             ),
-                            sliver: SliverToBoxAdapter(
-                              child: _sectionTitle('Browse All'),
-                            ),
+                            sliver: SliverToBoxAdapter(child: _buildHeader()),
                           ),
                           SliverPadding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: _sidePadding,
+                            padding: const EdgeInsets.fromLTRB(
+                              _sidePadding,
+                              16,
+                              _sidePadding,
+                              0,
                             ),
-                            sliver: SliverGrid(
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    crossAxisSpacing: 12,
-                                    mainAxisSpacing: 12,
-                                    childAspectRatio: 1.05,
-                                  ),
-                              delegate: SliverChildBuilderDelegate((
-                                context,
-                                index,
-                              ) {
-                                final genre = _genres[index];
-                                return _buildGenreCard(genre);
-                              }, childCount: _genres.length),
+                            sliver: SliverToBoxAdapter(
+                              child: _buildSearchBar(),
                             ),
                           ),
                           SliverPadding(
                             padding: const EdgeInsets.fromLTRB(
                               _sidePadding,
-                              22,
+                              16,
                               _sidePadding,
-                              10,
+                              0,
                             ),
-                            sliver: SliverToBoxAdapter(
-                              child: _sectionTitle('Recent Searches'),
-                            ),
+                            sliver: SliverToBoxAdapter(child: _buildMoodRow()),
                           ),
-                          SliverPadding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: _sidePadding,
+                          if (_showSearchResults)
+                            ..._buildSearchResultsSlivers(allSongs)
+                          else ...[
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(
+                                _sidePadding,
+                                20,
+                                _sidePadding,
+                                8,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: _sectionTitle('Trending This Week'),
+                              ),
                             ),
-                            sliver: SliverToBoxAdapter(
-                              child: _buildRecentSearches(),
+                            SliverToBoxAdapter(
+                              child: _buildQuickPicks(quickPicks),
                             ),
-                          ),
-                          if (trendingSongs.isNotEmpty) ...[
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(
+                                _sidePadding,
+                                24,
+                                _sidePadding,
+                                10,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: _sectionTitle('Browse All'),
+                              ),
+                            ),
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: _sidePadding,
+                              ),
+                              sliver: SliverGrid(
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 12,
+                                      childAspectRatio: 1.05,
+                                    ),
+                                delegate: SliverChildBuilderDelegate((
+                                  context,
+                                  index,
+                                ) {
+                                  final genre = _genres[index];
+                                  return _buildGenreCard(genre);
+                                }, childCount: _genres.length),
+                              ),
+                            ),
                             SliverPadding(
                               padding: const EdgeInsets.fromLTRB(
                                 _sidePadding,
@@ -347,29 +337,52 @@ class _SearchPageState extends State<SearchPage> {
                                 10,
                               ),
                               sliver: SliverToBoxAdapter(
-                                child: _sectionTitle('Online Albums'),
+                                child: _sectionTitle('Recent Searches'),
                               ),
                             ),
                             SliverPadding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: _sidePadding,
                               ),
-                              sliver: SliverList.separated(
-                                itemCount: trendingSongs.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 10),
-                                itemBuilder: (context, index) {
-                                  final song = trendingSongs[index];
-                                  return _buildOnlineAlbumTile(song);
-                                },
+                              sliver: SliverToBoxAdapter(
+                                child: _buildRecentSearches(),
                               ),
                             ),
+                            if (trendingSongs.isNotEmpty) ...[
+                              SliverPadding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  _sidePadding,
+                                  22,
+                                  _sidePadding,
+                                  10,
+                                ),
+                                sliver: SliverToBoxAdapter(
+                                  child: _sectionTitle('Online Albums'),
+                                ),
+                              ),
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: _sidePadding,
+                                ),
+                                sliver: SliverList.separated(
+                                  itemCount: trendingSongs.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 10),
+                                  itemBuilder: (context, index) {
+                                    final song = trendingSongs[index];
+                                    return _buildOnlineAlbumTile(song);
+                                  },
+                                ),
+                              ),
+                            ],
                           ],
+                          const SliverToBoxAdapter(
+                            child: SizedBox(height: 110),
+                          ),
                         ],
-                        const SliverToBoxAdapter(child: SizedBox(height: 110)),
-                      ],
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
             ],
@@ -379,34 +392,39 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildSearchResultsSliver(List<Song> allSongs) {
+  List<Widget> _buildSearchResultsSlivers(List<Song> allSongs) {
     final query = _normalizeQuery(_searchController.text);
     final songs = allSongs
         .where((song) => _matchesSearch(song, query))
         .toList();
 
-    return SliverFillRemaining(
-      hasScrollBody: true,
-      child: songs.isEmpty
-          ? const Center(
+    if (songs.isEmpty) {
+      return const [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(_sidePadding, 40, _sidePadding, 0),
+            child: Center(
               child: Text(
                 'No matching songs found',
                 style: TextStyle(color: Colors.white70),
               ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(
-                _sidePadding,
-                12,
-                _sidePadding,
-                0,
-              ),
-              itemCount: songs.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) =>
-                  _buildResultTile(songs[index], songs),
             ),
-    );
+          ),
+        ),
+      ];
+    }
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(_sidePadding, 12, _sidePadding, 0),
+        sliver: SliverList.separated(
+          itemCount: songs.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) =>
+              _buildResultTile(songs[index], songs),
+        ),
+      ),
+    ];
   }
 
   Widget _buildHeader() {
@@ -720,36 +738,45 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Widget _buildRecentSearches() {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: _recentSearches.map((query) {
-        return GestureDetector(
-          onTap: () {
-            _searchController.text = query;
-            _searchController.selection = TextSelection.collapsed(
-              offset: query.length,
-            );
-            _searchFocusNode.requestFocus();
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-            ),
-            child: Text(
-              query,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+    return SizedBox(
+      height: 42,
+      child: ListView.separated(
+        primary: false,
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        itemCount: _recentSearches.length,
+        itemBuilder: (context, index) {
+          final query = _recentSearches[index];
+          return GestureDetector(
+            onTap: () {
+              _searchController.text = query;
+              _searchController.selection = TextSelection.collapsed(
+                offset: query.length,
+              );
+              _searchFocusNode.requestFocus();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+              ),
+              child: Text(
+                query,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-        );
-      }).toList(),
+          );
+        },
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+      ),
     );
   }
 
@@ -946,17 +973,20 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   String _normalizeQuery(String value) {
-    return value.trim().toLowerCase();
+    return value
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ');
   }
 
   bool _matchesSearch(Song song, String query) {
     if (query.isEmpty) return true;
-    final title = song.title.toLowerCase();
-    final artist = song.artist.toLowerCase();
-    final album = song.album.toLowerCase();
-    return title.contains(query) ||
-        artist.contains(query) ||
-        album.contains(query);
+    final haystack = _normalizeQuery(
+      '${song.title} ${song.artist} ${song.album}',
+    );
+    final tokens = query.split(' ').where((token) => token.isNotEmpty);
+    return tokens.every(haystack.contains);
   }
 }
 

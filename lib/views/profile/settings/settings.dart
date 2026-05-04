@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../background/gradient_mesh_background.dart';
 import '../../../pages/sign_in_or_sign_up_page.dart';
 import '../../../services/auth_store.dart';
-import '../../../widgets/app_loading_animation.dart';
+import '../../../widgets/app_skeletons.dart';
 import 'change_password_page.dart';
 import 'edit profile /edit_profile.dart';
 import 'help_center_page.dart';
@@ -89,7 +89,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           if (_loading)
-            const Center(child: AppLoadingAnimation(size: 220))
+            const FormPageSkeleton()
           else
             ListView(
               padding: EdgeInsets.fromLTRB(
@@ -389,68 +389,6 @@ class _SettingsPageState extends State<SettingsPage> {
                             theme: _settings.theme,
                             language: _settings.language,
                             cacheLimit: v,
-                          ),
-                        ),
-                      ),
-                      _choiceTile(
-                        icon: Icons.palette_outlined,
-                        title: 'Theme',
-                        value: _settings.theme,
-                        options: _config.themes,
-                        onChanged: (v) => _update(
-                          _settings = UserSettingsData(
-                            autoplay: _settings.autoplay,
-                            wifiOnlyDownloads: _settings.wifiOnlyDownloads,
-                            normalizeAudio: _settings.normalizeAudio,
-                            crossfade: _settings.crossfade,
-                            equalizerEnabled: _settings.equalizerEnabled,
-                            pushNewReleases: _settings.pushNewReleases,
-                            pushRecommendations: _settings.pushRecommendations,
-                            privateSession: _settings.privateSession,
-                            listeningActivityVisible:
-                                _settings.listeningActivityVisible,
-                            biometricLock: _settings.biometricLock,
-                            crossfadeSeconds: _settings.crossfadeSeconds,
-                            bassLevel: _settings.bassLevel,
-                            midLevel: _settings.midLevel,
-                            trebleLevel: _settings.trebleLevel,
-                            dolbyAtmos: _settings.dolbyAtmos,
-                            highResMusic: _settings.highResMusic,
-                            equalizerPreset: _settings.equalizerPreset,
-                            theme: v,
-                            language: _settings.language,
-                            cacheLimit: _settings.cacheLimit,
-                          ),
-                        ),
-                      ),
-                      _choiceTile(
-                        icon: Icons.language_rounded,
-                        title: 'Language',
-                        value: _settings.language,
-                        options: _config.languages,
-                        onChanged: (v) => _update(
-                          _settings = UserSettingsData(
-                            autoplay: _settings.autoplay,
-                            wifiOnlyDownloads: _settings.wifiOnlyDownloads,
-                            normalizeAudio: _settings.normalizeAudio,
-                            crossfade: _settings.crossfade,
-                            equalizerEnabled: _settings.equalizerEnabled,
-                            pushNewReleases: _settings.pushNewReleases,
-                            pushRecommendations: _settings.pushRecommendations,
-                            privateSession: _settings.privateSession,
-                            listeningActivityVisible:
-                                _settings.listeningActivityVisible,
-                            biometricLock: _settings.biometricLock,
-                            crossfadeSeconds: _settings.crossfadeSeconds,
-                            bassLevel: _settings.bassLevel,
-                            midLevel: _settings.midLevel,
-                            trebleLevel: _settings.trebleLevel,
-                            dolbyAtmos: _settings.dolbyAtmos,
-                            highResMusic: _settings.highResMusic,
-                            equalizerPreset: _settings.equalizerPreset,
-                            theme: _settings.theme,
-                            language: v,
-                            cacheLimit: _settings.cacheLimit,
                           ),
                         ),
                       ),

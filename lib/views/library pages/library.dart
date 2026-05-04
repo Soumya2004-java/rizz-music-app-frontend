@@ -9,7 +9,7 @@ import 'package:rizzmusicapp/views/library%20pages/songs/songs_page.dart';
 import '../../background/gradient_mesh_background.dart';
 import '../../music/music_repository.dart';
 import '../../songs/songs.dart';
-import '../../widgets/app_loading_animation.dart';
+import '../../widgets/app_skeletons.dart';
 import '../player/player_session.dart';
 import 'download/download_page.dart';
 
@@ -68,7 +68,7 @@ class LibraryPage extends StatelessWidget {
               future: MusicRepository.fetchLibraryStats(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: AppLoadingAnimation());
+                  return const ListPageSkeleton();
                 }
 
                 if (snapshot.hasError) {
@@ -259,13 +259,11 @@ class LibraryPage extends StatelessWidget {
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
-                            return SizedBox(
+                            return const SizedBox(
                               height: 86,
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: secondaryText,
-                                ),
+                              child: AppSkeletonBox(
+                                height: 86,
+                                radius: 14,
                               ),
                             );
                           }

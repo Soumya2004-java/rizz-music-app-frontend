@@ -167,7 +167,11 @@ class PlayerSession {
     _emit();
   }
 
-  void playSong(Song song, {bool autoPlay = true}) {
+  void playSong(
+    Song song, {
+    bool autoPlay = true,
+    bool preserveMinimizedState = false,
+  }) {
     final isNewSong = _currentSong?.id != song.id;
 
     _currentSong = song;
@@ -180,7 +184,9 @@ class PlayerSession {
       _position = Duration.zero;
     }
 
-    _isMinimized = false;
+    if (!preserveMinimizedState) {
+      _isMinimized = false;
+    }
 
     if (song.hasRemoteAudio) {
       _stopTicker();
@@ -667,7 +673,7 @@ class PlayerSession {
       do {
         nextIndex = _random.nextInt(_queue.length);
       } while (nextIndex == currentIndex);
-      playSong(_queue[nextIndex]);
+      playSong(_queue[nextIndex], preserveMinimizedState: true);
       return;
     }
 
@@ -686,7 +692,7 @@ class PlayerSession {
       }
     }
 
-    playSong(_queue[nextIndex]);
+    playSong(_queue[nextIndex], preserveMinimizedState: true);
   }
 
   void _handleTrackCompleted() {

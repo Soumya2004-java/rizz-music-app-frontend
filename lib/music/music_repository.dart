@@ -82,6 +82,8 @@ class MusicRepository {
   MusicRepository._();
 
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static List<AlbumSummary>? _albumsMemoryCache;
+  static Future<List<AlbumSummary>>? _albumsInFlight;
 
   static Future<List<Song>> fetchSongs() => SongApi.fetchSongs();
 
@@ -114,6 +116,26 @@ class MusicRepository {
   }
 
   static Future<List<AlbumSummary>> fetchAlbums() async {
+    final cached = _albumsMemoryCache;
+    if (cached != null && cached.isNotEmpty) return cached;
+
+    final inFlight = _albumsInFlight;
+    if (inFlight != null) return inFlight;
+
+    final request = _computeAlbums();
+    _albumsInFlight = request;
+    try {
+      final albums = await request;
+      if (albums.isNotEmpty) {
+        _albumsMemoryCache = albums;
+      }
+      return albums;
+    } finally {
+      _albumsInFlight = null;
+    }
+  }
+
+  static Future<List<AlbumSummary>> _computeAlbums() async {
     final songs = await fetchSongs();
     final map = <String, _AlbumAccumulator>{};
 

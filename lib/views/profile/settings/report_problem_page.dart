@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../background/gradient_mesh_background.dart';
-import '../../../widgets/app_loading_animation.dart';
+import '../../../widgets/app_skeletons.dart';
 import 'settings_store.dart';
 
 class ReportProblemPage extends StatefulWidget {
@@ -64,7 +64,7 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
             ),
           ),
           if (_loading)
-            const Center(child: AppLoadingAnimation())
+            const FormPageSkeleton()
           else
             ListView(
               padding: EdgeInsets.fromLTRB(

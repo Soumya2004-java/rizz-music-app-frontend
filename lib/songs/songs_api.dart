@@ -11,11 +11,48 @@ class SongApi {
     'SONGS_CATALOG_URL',
     defaultValue: '',
   );
+  static List<Song>? _songsMemoryCache;
+  static Future<List<Song>>? _songsInFlight;
 
   static Future<List<Song>> fetchSongs() async {
+    final cached = _songsMemoryCache;
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
+
+    final inFlight = _songsInFlight;
+    if (inFlight != null) return inFlight;
+
+    final request = _fetchSongsInternal();
+    _songsInFlight = request;
+    try {
+      final songs = await request;
+      if (songs.isNotEmpty) {
+        _songsMemoryCache = songs;
+      }
+      return songs;
+    } finally {
+      _songsInFlight = null;
+    }
+  }
+
+  static Future<List<Song>> _fetchSongsInternal() async {
     if (_songsCatalogUrl.isNotEmpty) {
       return _fetchFromCatalog();
     }
+
+    try {
+      final cacheSnapshot = await FirebaseFirestore.instance
+          .collectionGroup('songs')
+          .get(const GetOptions(source: Source.cache));
+      if (cacheSnapshot.docs.isNotEmpty) {
+        final cachedSongs = await Future.wait(cacheSnapshot.docs.map(_songFromDoc));
+        cachedSongs.sort(
+          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+        );
+        return cachedSongs;
+      }
+    } catch (_) {}
 
     try {
       final snapshot = await FirebaseFirestore.instance
@@ -28,6 +65,16 @@ class SongApi {
       return songs;
     } catch (e) {
       // Fallback to top-level songs collection.
+      try {
+        final fallbackCache = await FirebaseFirestore.instance
+            .collection('songs')
+            .orderBy('title')
+            .get(const GetOptions(source: Source.cache));
+        if (fallbackCache.docs.isNotEmpty) {
+          return Future.wait(fallbackCache.docs.map(_songFromDoc));
+        }
+      } catch (_) {}
+
       try {
         final fallback = await FirebaseFirestore.instance
             .collection('songs')

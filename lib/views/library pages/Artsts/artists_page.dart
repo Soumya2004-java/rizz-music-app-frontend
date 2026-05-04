@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../background/gradient_mesh_background.dart';
 import '../../../music/music_repository.dart';
 import '../../../songs/albums/album_page.dart';
-import '../../../widgets/app_loading_animation.dart';
+import '../../../widgets/app_cached_image.dart';
+import '../../../widgets/app_skeletons.dart';
 
 class ArtistPage extends StatelessWidget {
   const ArtistPage({super.key, this.selectedArtists = const []});
@@ -37,7 +38,7 @@ class ArtistPage extends StatelessWidget {
             future: MusicRepository.fetchArtists(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: AppLoadingAnimation());
+                return const GridPageSkeleton();
               }
 
               if (snapshot.hasError) {
@@ -127,11 +128,7 @@ class ArtistPage extends StatelessWidget {
                     child: AspectRatio(
                       aspectRatio: 1,
                       child: artist.imageUrl.startsWith('http')
-                          ? Image.network(
-                              artist.imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _fallback(),
-                            )
+                          ? AppCachedImage(url: artist.imageUrl)
                           : _fallback(),
                     ),
                   ),

@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import '../../background/gradient_mesh_background.dart';
 import '../../views/player/player_scrreen.dart';
 import '../../views/player/player_session.dart';
-import '../../widgets/app_loading_animation.dart';
+import '../../widgets/app_skeletons.dart';
 import '../songs.dart';
 import '../songs_api.dart';
 
@@ -325,7 +325,7 @@ class AlbumPage extends StatelessWidget {
     AsyncSnapshot<List<Song>> snapshot,
   ) {
     if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Center(child: AppLoadingAnimation());
+      return const ListPageSkeleton();
     }
 
     if (snapshot.hasError) {

@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../background/gradient_mesh_background.dart';
 import '../../../music/music_repository.dart';
 import '../../../songs/songs.dart';
-import '../../../widgets/app_loading_animation.dart';
+import '../../../widgets/app_cached_image.dart';
+import '../../../widgets/app_skeletons.dart';
 import '../../player/player_scrreen.dart';
 import '../../player/player_session.dart';
 
@@ -44,7 +45,7 @@ class PlaylistPage extends StatelessWidget {
             future: MusicRepository.fetchPlaylists(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: AppLoadingAnimation());
+                return const ListPageSkeleton();
               }
 
               if (snapshot.hasError) {
@@ -143,10 +144,10 @@ class PlaylistPage extends StatelessWidget {
               width: 44,
               height: 44,
               child: playlist.imageUrl.startsWith('http')
-                  ? Image.network(
-                      playlist.imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _fallbackCover(),
+                  ? AppCachedImage(
+                      url: playlist.imageUrl,
+                      width: 44,
+                      height: 44,
                     )
                   : _fallbackCover(),
             ),

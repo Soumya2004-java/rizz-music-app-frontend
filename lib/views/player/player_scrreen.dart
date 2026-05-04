@@ -5,10 +5,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
+import '../../services/song_download_service.dart';
 import '../../songs/albums/album_page.dart';
 import '../../songs/songs.dart';
 import '../profile/settings/settings.dart';
 import '../../widgets/glass_popup.dart';
+import '../../widgets/auto_marquee_text.dart';
 import 'player_session.dart';
 
 class PlayerScreen extends StatefulWidget {
@@ -26,6 +28,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   late final AnimationController _discController;
   late final AnimationController _vibeController;
   StreamSubscription<PlayerSnapshot>? _sessionSub;
+  bool _isDownloading = false;
 
   @override
   void initState() {
@@ -386,6 +389,44 @@ class _PlayerScreenState extends State<PlayerScreen>
         },
       ),
     );
+  }
+
+  Future<void> _downloadCurrentSong() async {
+    if (_isDownloading) return;
+    final song = _session.currentSong ?? widget.song;
+    if (song == null) {
+      _showSnack('No song is selected.');
+      return;
+    }
+
+    if (!(song.hasRemoteAudio)) {
+      _showSnack('No downloadable audio found for this song.');
+      return;
+    }
+
+    setState(() {
+      _isDownloading = true;
+    });
+
+    try {
+      final result = await SongDownloadService.downloadSong(song);
+      if (!mounted) return;
+      final savedPath = result.file.path;
+      if (result.alreadyExists) {
+        _showSnack('Already downloaded: $savedPath');
+      } else {
+        _showSnack('Downloaded to: $savedPath');
+      }
+    } catch (error) {
+      if (!mounted) return;
+      _showSnack('Download failed: $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+        });
+      }
+    }
   }
 
   Future<void> _openUpNextSheet() async {
@@ -1067,10 +1108,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
+                                  AutoMarqueeText(
                                     artist,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 15,
@@ -1257,6 +1296,43 @@ class _PlayerScreenState extends State<PlayerScreen>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
+                            OutlinedButton(
+                              onPressed: _isDownloading
+                                  ? null
+                                  : _downloadCurrentSong,
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                ),
+                                foregroundColor: isLight
+                                    ? Colors.black
+                                    : Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                padding: const EdgeInsets.all(12),
+                                minimumSize: const Size(46, 46),
+                              ),
+                              child: _isDownloading
+                                  ? SizedBox(
+                                      height: 18,
+                                      width: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: isLight
+                                            ? Colors.black
+                                            : Colors.white,
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.download_rounded,
+                                      size: 20,
+                                      color: isLight
+                                          ? Colors.black
+                                          : Colors.white,
+                                    ),
+                            ),
+                            const SizedBox(width: 10),
                             SizedBox(
                               width: devicesCardWidth,
                               child: OutlinedButton.icon(
@@ -1436,15 +1512,14 @@ class LyricsFullPage extends StatelessWidget {
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                Text(
+                                AutoMarqueeText(
                                   artist,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
                               ],
                             ),

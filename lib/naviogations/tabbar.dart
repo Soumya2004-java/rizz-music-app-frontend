@@ -18,7 +18,6 @@ class Tabbars extends StatefulWidget {
 class _TabbarsState extends State<Tabbars> with RouteAware {
   int _currentIndex = 0;
   int _searchTabTapCount = 0;
-  bool _isTabAnimating = false;
   late final PageController _pageController;
   late final List<Widget> _screens;
 
@@ -84,9 +83,7 @@ class _TabbarsState extends State<Tabbars> with RouteAware {
       extendBody: true,
       body: PageView(
         controller: _pageController,
-        physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics(),
-        ),
+        physics: const NeverScrollableScrollPhysics(),
         allowImplicitScrolling: true,
         onPageChanged: (index) {
           setState(() {
@@ -203,9 +200,7 @@ class _TabbarsState extends State<Tabbars> with RouteAware {
     final isSelected = _currentIndex == index;
 
     return GestureDetector(
-      onTap: () async {
-        if (_isTabAnimating && index != _currentIndex) return;
-
+      onTap: () {
         if (index == 1 && _currentIndex == 1) {
           setState(() {
             _searchTabTapCount++;
@@ -217,26 +212,12 @@ class _TabbarsState extends State<Tabbars> with RouteAware {
 
         if (index == _currentIndex) return;
 
-        final distance = (index - _currentIndex).abs();
-        setState(() => _isTabAnimating = true);
-        try {
-          await _pageController.animateToPage(
-            index,
-            duration: Duration(milliseconds: distance > 1 ? 340 : 300),
-            curve: Curves.easeInOutCubicEmphasized,
-          );
-        } finally {
-          if (mounted) {
-            setState(() => _isTabAnimating = false);
-          }
-        }
+        _pageController.jumpToPage(index);
       },
       child: SizedBox(
         width: itemWidth,
         child: Center(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 240),
-            curve: Curves.easeInOutCubic,
+          child: Container(
             width: itemWidth,
             height: 52,
             decoration: BoxDecoration(

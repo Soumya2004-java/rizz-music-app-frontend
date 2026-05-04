@@ -5,6 +5,7 @@ import 'package:rizzmusicapp/services/app_navigator.dart';
 import 'package:rizzmusicapp/services/tabbar_visibility.dart';
 
 import '../../songs/songs.dart';
+import '../../widgets/auto_marquee_text.dart';
 import 'player_scrreen.dart';
 import 'player_session.dart';
 
@@ -167,11 +168,8 @@ class GlobalMiniPlayerOverlay extends StatelessWidget {
                                                       ),
                                                     ),
                                                     const SizedBox(height: 1),
-                                                    Text(
+                                                    AutoMarqueeText(
                                                       '${song.artist} • ${song.album}',
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
                                                       style: TextStyle(
                                                         color: const Color(
                                                           0xFF12141A,
@@ -179,6 +177,7 @@ class GlobalMiniPlayerOverlay extends StatelessWidget {
                                                         fontSize: 9.5,
                                                         fontWeight: FontWeight.w500,
                                                       ),
+                                                      pixelsPerSecond: 30,
                                                     ),
                                                   ],
                                                 ),
