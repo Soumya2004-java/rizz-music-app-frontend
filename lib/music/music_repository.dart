@@ -172,7 +172,7 @@ class MusicRepository {
       final artist = song.artist.trim().isEmpty
           ? 'Unknown Artist'
           : song.artist.trim();
-      final key = '$artist|$album';
+      final key = _normalizeAlbumKey(album);
       map
           .putIfAbsent(
             key,
@@ -192,7 +192,19 @@ class MusicRepository {
               ),
             )
             .toList()
-          ..sort((a, b) => b.trackCount.compareTo(a.trackCount));
+          ..sort((a, b) {
+            final byTitle = a.title.toLowerCase().compareTo(
+              b.title.toLowerCase(),
+            );
+            if (byTitle != 0) return byTitle;
+
+            final byArtist = a.artist.toLowerCase().compareTo(
+              b.artist.toLowerCase(),
+            );
+            if (byArtist != 0) return byArtist;
+
+            return b.trackCount.compareTo(a.trackCount);
+          });
 
     return albums;
   }
@@ -331,4 +343,9 @@ String? _asText(dynamic value) {
   if (value == null) return null;
   final text = value.toString().trim();
   return text.isEmpty ? null : text;
+}
+
+String _normalizeAlbumKey(String album) {
+  final compact = album.trim().replaceAll(RegExp(r'\s+'), ' ');
+  return compact.toLowerCase();
 }

@@ -46,16 +46,27 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
+        final t = Curves.easeInOut.transform(_controller.value);
+        final dy = -2.5 + (t * 5.0);
         return Container(
           margin: widget.margin,
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.radius),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [base, Color.lerp(base, glow, _controller.value)!, base],
+          child: Transform.translate(
+            offset: Offset(0, dy),
+            child: Container(
+              width: widget.width,
+              height: widget.height,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(widget.radius),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    base,
+                    Color.lerp(base, glow, _controller.value)!,
+                    base,
+                  ],
+                ),
+              ),
             ),
           ),
         );

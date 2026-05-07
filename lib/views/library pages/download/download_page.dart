@@ -27,6 +27,12 @@ class _DownloadPageState extends State<DownloadPage> {
     _downloadsFuture = SongDownloadService.listDownloadedSongs();
   }
 
+  void _reloadDownloads() {
+    setState(() {
+      _downloadsFuture = SongDownloadService.listDownloadedSongs();
+    });
+  }
+
   Widget _summaryCard(List<DownloadedSong> downloads) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
@@ -94,6 +100,48 @@ class _DownloadPageState extends State<DownloadPage> {
     );
   }
 
+  Future<void> _deleteDownloadedSong(DownloadedSong song) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete download?'),
+          content: Text('Remove "${song.title}" from this device?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete != true) return;
+
+    try {
+      await SongDownloadService.deleteDownloadedSong(song);
+      if (!mounted) return;
+      _reloadDownloads();
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('"${song.title}" deleted from downloads.')),
+        );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Failed to delete download: $error')),
+        );
+    }
+  }
+
   Widget _songCard(DownloadedSong song, List<DownloadedSong> allDownloads) {
     return GestureDetector(
       onTap: () => _playDownloadedSong(song, allDownloads),
@@ -115,18 +163,41 @@ class _DownloadPageState extends State<DownloadPage> {
                   borderRadius: BorderRadius.circular(12),
                   child: AspectRatio(aspectRatio: 1, child: _coverImage(song)),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  song.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        song.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () => _deleteDownloadedSong(song),
+                        child: const Padding(
+                          padding: EdgeInsets.all(2),
+                          child: Icon(
+                            Icons.delete_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   song.artist,
                   maxLines: 1,
@@ -136,21 +207,8 @@ class _DownloadPageState extends State<DownloadPage> {
                     fontSize: 12,
                   ),
                 ),
-                const SizedBox(height: 7),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _metaPill(
-                        Icons.sd_storage_rounded,
-                        song.sizeLabel,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: _metaPill(Icons.music_note_rounded, 'Offline'),
-                    ),
-                  ],
-                ),
+                const SizedBox(height: 5),
+                _metaPill(Icons.music_note_rounded, 'Offline'),
               ],
             ),
           ),

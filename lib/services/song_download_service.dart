@@ -114,6 +114,26 @@ class SongDownloadService {
     return files.map(_toDownloadedSong).toList(growable: false);
   }
 
+  static Future<void> deleteDownloadedSong(DownloadedSong song) async {
+    final audioFile = File(song.filePath);
+    if (await audioFile.exists()) {
+      await audioFile.delete();
+    }
+
+    final metadataFile = File(_metadataPathFor(song.filePath));
+    if (await metadataFile.exists()) {
+      await metadataFile.delete();
+    }
+
+    final localCoverPath = (song.localCoverPath ?? '').trim();
+    if (localCoverPath.isNotEmpty && !localCoverPath.startsWith('assets/')) {
+      final coverFile = File(localCoverPath);
+      if (await coverFile.exists()) {
+        await coverFile.delete();
+      }
+    }
+  }
+
   static DownloadedSong _toDownloadedSong(File file) {
     final fileName = file.uri.pathSegments.isNotEmpty
         ? file.uri.pathSegments.last
