@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -543,8 +544,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                             ),
                           ),
                           ...recentlyPlayedQueue.map((song) {
-                            final imageUrl = song.imageUrl?.trim() ?? '';
-                            final hasImage = imageUrl.isNotEmpty;
                             return ListTile(
                               onTap: () {
                                 Navigator.pop(sheetContext);
@@ -555,29 +554,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 child: SizedBox(
                                   width: 44,
                                   height: 44,
-                                  child: hasImage
-                                      ? Image.network(
-                                          imageUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, _, _) => Container(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.14,
-                                            ),
-                                            child: const Icon(
-                                              Icons.music_note_rounded,
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                        )
-                                      : Container(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.14,
-                                          ),
-                                          child: const Icon(
-                                            Icons.music_note_rounded,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
+                                  child: _queueCoverImage(song),
                                 ),
                               ),
                               title: Text(
@@ -626,8 +603,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                             final index = entry.key;
                             final song = entry.value;
                             final isCurrent = index == 0 && currentIndex >= 0;
-                            final imageUrl = song.imageUrl?.trim() ?? '';
-                            final hasImage = imageUrl.isNotEmpty;
                             return ListTile(
                               onTap: () {
                                 Navigator.pop(sheetContext);
@@ -638,29 +613,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 child: SizedBox(
                                   width: 44,
                                   height: 44,
-                                  child: hasImage
-                                      ? Image.network(
-                                          imageUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, _, _) => Container(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.14,
-                                            ),
-                                            child: const Icon(
-                                              Icons.music_note_rounded,
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                        )
-                                      : Container(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.14,
-                                          ),
-                                          child: const Icon(
-                                            Icons.music_note_rounded,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
+                                  child: _queueCoverImage(song),
                                 ),
                               ),
                               title: Text(
@@ -763,15 +716,42 @@ class _PlayerScreenState extends State<PlayerScreen>
     return '${two(d.inMinutes.remainder(60))}:${two(d.inSeconds.remainder(60))}';
   }
 
-  ImageProvider<Object> _songArtwork(Song? song) {
-    final imageUrl = song?.imageUrl?.trim() ?? '';
-    if (imageUrl.isNotEmpty) return NetworkImage(imageUrl);
-    return const AssetImage(
-      'assets/albums/ab67616d0000b273627b5b17cb48f6e6956b842e.jpeg',
+  ImageProvider<Object>? _songArtwork(Song? song) =>
+      _artworkProvider(song?.imageUrl);
+
+  ImageProvider<Object>? _artworkProvider(String? rawSource) {
+    final source = (rawSource ?? '').trim();
+    if (source.isEmpty) return null;
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return NetworkImage(source);
+    }
+    if (source.startsWith('assets/')) {
+      return AssetImage(source);
+    }
+    if (File(source).existsSync()) {
+      return FileImage(File(source));
+    }
+    return null;
+  }
+
+  Widget _queueCoverImage(Song song) {
+    final provider = _artworkProvider(song.imageUrl);
+    if (provider == null) return _queueCoverFallback();
+    return Image(
+      image: provider,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => _queueCoverFallback(),
     );
   }
 
-  Widget _buildRetroDisc(ImageProvider<Object> artwork, double size) {
+  Widget _queueCoverFallback() {
+    return Container(
+      color: Colors.white.withValues(alpha: 0.14),
+      child: const Icon(Icons.music_note_rounded, color: Colors.grey),
+    );
+  }
+
+  Widget _buildRetroDisc(ImageProvider<Object>? artwork, double size) {
     final spindleSize = size * 0.16;
 
     return RotationTransition(
@@ -804,12 +784,24 @@ class _PlayerScreenState extends State<PlayerScreen>
           alignment: Alignment.center,
           children: [
             ClipOval(
-              child: Image(
-                image: artwork,
-                width: size,
-                height: size,
-                fit: BoxFit.cover,
-              ),
+              child: artwork != null
+                  ? Image(
+                      image: artwork,
+                      width: size,
+                      height: size,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      width: size,
+                      height: size,
+                      color: const Color(0xFF0E1117),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.music_note_rounded,
+                        color: Colors.white.withValues(alpha: 0.52),
+                        size: size * 0.22,
+                      ),
+                    ),
             ),
             Container(
               width: size,
@@ -862,7 +854,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  Widget _buildRetroTurntable(ImageProvider<Object> artwork, double discSize) {
+  Widget _buildRetroTurntable(ImageProvider<Object>? artwork, double discSize) {
     return SizedBox(
       width: discSize,
       height: discSize + 36,
@@ -1015,7 +1007,9 @@ class _PlayerScreenState extends State<PlayerScreen>
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  image: DecorationImage(image: artwork, fit: BoxFit.cover),
+                  image: artwork == null
+                      ? null
+                      : DecorationImage(image: artwork, fit: BoxFit.cover),
                 ),
               ),
             ),

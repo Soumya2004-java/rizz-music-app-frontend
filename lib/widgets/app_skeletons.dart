@@ -7,12 +7,14 @@ class AppSkeletonBox extends StatefulWidget {
     this.width,
     this.radius = 12,
     this.margin,
+    this.child,
   });
 
   final double height;
   final double? width;
   final double radius;
   final EdgeInsetsGeometry? margin;
+  final Widget? child;
 
   @override
   State<AppSkeletonBox> createState() => _AppSkeletonBoxState();
@@ -67,6 +69,7 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
                   ],
                 ),
               ),
+              child: widget.child,
             ),
           ),
         );
@@ -112,23 +115,23 @@ class HomePageSkeleton extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(18, top + 20, 18, 24),
       children: const [
-        AppSkeletonBox(height: 34, width: 210, radius: 10),
+        AppSkeletonBox(height: 34, width: 220, radius: 10),
         SizedBox(height: 8),
-        AppSkeletonBox(height: 14, width: 180, radius: 8),
+        AppSkeletonBox(height: 14, width: 190, radius: 8),
         SizedBox(height: 16),
-        AppSkeletonBox(height: 206, radius: 20),
+        _FeaturedAlbumSkeleton(),
         SizedBox(height: 18),
-        AppSkeletonBox(height: 22, width: 160, radius: 8),
+        AppSkeletonBox(height: 22, width: 170, radius: 8),
         SizedBox(height: 8),
         AppSkeletonBox(height: 12, width: 220, radius: 8),
-        SizedBox(height: 8),
-        AppSkeletonBox(height: 224, radius: 18),
+        SizedBox(height: 12),
+        _HorizontalAlbumRowSkeleton(),
         SizedBox(height: 14),
         AppSkeletonBox(height: 22, width: 180, radius: 8),
         SizedBox(height: 8),
         AppSkeletonBox(height: 12, width: 230, radius: 8),
-        SizedBox(height: 8),
-        AppSkeletonBox(height: 224, radius: 18),
+        SizedBox(height: 12),
+        _HorizontalAlbumRowSkeleton(),
       ],
     );
   }
@@ -143,24 +146,119 @@ class GridPageSkeleton extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
       children: const [
-        AppSkeletonBox(height: 42, radius: 12),
+        AppSkeletonBox(height: 42, radius: 12, width: 120),
         SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: AppSkeletonBox(height: 206, radius: 16)),
+            Expanded(child: _AlbumGridCardSkeleton()),
             SizedBox(width: 12),
-            Expanded(child: AppSkeletonBox(height: 206, radius: 16)),
+            Expanded(child: _AlbumGridCardSkeleton()),
           ],
         ),
         SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: AppSkeletonBox(height: 206, radius: 16)),
+            Expanded(child: _AlbumGridCardSkeleton()),
             SizedBox(width: 12),
-            Expanded(child: AppSkeletonBox(height: 206, radius: 16)),
+            Expanded(child: _AlbumGridCardSkeleton()),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _FeaturedAlbumSkeleton extends StatelessWidget {
+  const _FeaturedAlbumSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSkeletonBox(
+      height: 206,
+      radius: 20,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 140, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            AppSkeletonBox(height: 20, width: 170, radius: 8),
+            SizedBox(height: 6),
+            AppSkeletonBox(height: 12, width: 120, radius: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HorizontalAlbumRowSkeleton extends StatelessWidget {
+  const _HorizontalAlbumRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: 224,
+      child: Row(
+        children: [
+          Expanded(child: _HorizontalAlbumCardSkeleton()),
+          SizedBox(width: 12),
+          Expanded(child: _HorizontalAlbumCardSkeleton()),
+        ],
+      ),
+    );
+  }
+}
+
+class _HorizontalAlbumCardSkeleton extends StatelessWidget {
+  const _HorizontalAlbumCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSkeletonBox(
+      height: 224,
+      radius: 18,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            AppSkeletonBox(height: 142, radius: 12),
+            SizedBox(height: 10),
+            AppSkeletonBox(height: 14, width: 110, radius: 8),
+            SizedBox(height: 4),
+            AppSkeletonBox(height: 12, width: 90, radius: 8),
+            SizedBox(height: 8),
+            AppSkeletonBox(height: 11, width: 70, radius: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AlbumGridCardSkeleton extends StatelessWidget {
+  const _AlbumGridCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSkeletonBox(
+      height: 206,
+      radius: 16,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            AppSkeletonBox(height: 118, radius: 10),
+            SizedBox(height: 8),
+            AppSkeletonBox(height: 14, width: 86, radius: 8),
+            SizedBox(height: 4),
+            AppSkeletonBox(height: 12, width: 64, radius: 8),
+            SizedBox(height: 8),
+            AppSkeletonBox(height: 12, width: 72, radius: 8),
+          ],
+        ),
+      ),
     );
   }
 }
