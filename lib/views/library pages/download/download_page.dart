@@ -20,6 +20,7 @@ class DownloadPage extends StatefulWidget {
 
 class _DownloadPageState extends State<DownloadPage> {
   late Future<List<DownloadedSong>> _downloadsFuture;
+  final Set<String> _savingSongPaths = <String>{};
 
   @override
   void initState() {
@@ -100,25 +101,100 @@ class _DownloadPageState extends State<DownloadPage> {
     );
   }
 
+  Widget _buildGlassDialog({required Widget child}) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withValues(alpha: 0.40),
+                  Colors.white.withValues(alpha: 0.26),
+                  const Color(0xFFE8F1FA).withValues(alpha: 0.20),
+                ],
+              ),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.50),
+                width: 1.1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _deleteDownloadedSong(DownloadedSong song) async {
     final shouldDelete = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Delete download?'),
-          content: Text('Remove "${song.title}" from this device?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+      builder: (dialogContext) => _buildGlassDialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Delete download?',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Delete'),
+            const SizedBox(height: 10),
+            Text(
+              'Remove "${song.title}" from this device?',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.92),
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: Color(0xFF10151D),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(
+                      color: Color(0xFF10151D),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
-        );
-      },
+        ),
+      ),
     );
 
     if (shouldDelete != true) return;
@@ -142,6 +218,39 @@ class _DownloadPageState extends State<DownloadPage> {
     }
   }
 
+  Future<void> _saveSongToDevice(DownloadedSong song) async {
+    final key = song.filePath;
+    if (_savingSongPaths.contains(key)) return;
+
+    setState(() => _savingSongPaths.add(key));
+    try {
+      final savedFile = await SongDownloadService.saveDownloadedSongToDevice(
+        song,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Saved to device: ${savedFile.uri.pathSegments.last}',
+            ),
+          ),
+        );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Failed to save to device: $error')),
+        );
+    } finally {
+      if (mounted) {
+        setState(() => _savingSongPaths.remove(key));
+      }
+    }
+  }
+
   Widget _songCard(DownloadedSong song, List<DownloadedSong> allDownloads) {
     return GestureDetector(
       onTap: () => _playDownloadedSong(song, allDownloads),
@@ -150,7 +259,7 @@ class _DownloadPageState extends State<DownloadPage> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
           child: Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 7),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(18),
@@ -207,8 +316,63 @@ class _DownloadPageState extends State<DownloadPage> {
                     fontSize: 12,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 3),
                 _metaPill(Icons.music_note_rounded, 'Offline'),
+                const SizedBox(height: 6),
+                _saveToDeviceButton(song),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _saveToDeviceButton(DownloadedSong song) {
+    final isSaving = _savingSongPaths.contains(song.filePath);
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: isSaving ? null : () => _saveSongToDevice(song),
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isSaving)
+                  SizedBox(
+                    height: 12,
+                    width: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.8,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.save_alt_rounded,
+                    size: 12,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                const SizedBox(width: 6),
+                Text(
+                  isSaving ? 'Saving...' : 'Save to device',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
@@ -441,7 +605,7 @@ class _DownloadPageState extends State<DownloadPage> {
                               crossAxisCount: 2,
                               mainAxisSpacing: 6,
                               crossAxisSpacing: 6,
-                              childAspectRatio: 0.56,
+                              childAspectRatio: 0.60,
                             ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) =>
@@ -450,7 +614,6 @@ class _DownloadPageState extends State<DownloadPage> {
                         ),
                       ),
                     ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 120)),
                 ],
               );
             },

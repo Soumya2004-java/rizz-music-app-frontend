@@ -44,7 +44,7 @@ class AppConfigData {
   factory AppConfigData.defaults() {
     return const AppConfigData(
       membershipPlans: ['Free Member', 'Premium Member', 'Family Plan'],
-      themes: ['System', 'Light', 'Dark'],
+      themes: ['Dark'],
       languages: ['English', 'Hindi', 'Spanish'],
       cacheLimits: ['1 GB', '2 GB', '5 GB', '10 GB'],
       equalizerPresets: [
@@ -216,7 +216,7 @@ class UserSettingsData {
       dolbyAtmos: 'Automatic',
       highResMusic: 'On',
       equalizerPreset: 'Pop',
-      theme: 'System',
+      theme: 'Dark',
       language: 'English',
       cacheLimit: '2 GB',
     );

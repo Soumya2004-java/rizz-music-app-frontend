@@ -1,5 +1,7 @@
 import 'dart:ui';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:rizzmusicapp/services/app_navigator.dart';
 import 'package:rizzmusicapp/services/tabbar_visibility.dart';
@@ -14,7 +16,18 @@ class GlobalMiniPlayerOverlay extends StatelessWidget {
 
   ImageProvider<Object> _songArtwork(String? imageUrl) {
     final normalized = imageUrl?.trim() ?? '';
-    if (normalized.isNotEmpty) return NetworkImage(normalized);
+    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+      return NetworkImage(normalized);
+    }
+    if (normalized.startsWith('assets/')) {
+      return AssetImage(normalized);
+    }
+    if (!kIsWeb && normalized.isNotEmpty) {
+      final file = File(normalized);
+      if (file.existsSync()) {
+        return FileImage(file);
+      }
+    }
     return const AssetImage(
       'assets/albums/ab67616d0000b273627b5b17cb48f6e6956b842e.jpeg',
     );

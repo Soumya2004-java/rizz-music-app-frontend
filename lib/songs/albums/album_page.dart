@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../services/song_download_service.dart';
 import '../../background/gradient_mesh_background.dart';
 import '../../views/player/player_scrreen.dart';
 import '../../views/player/player_session.dart';
@@ -199,6 +200,292 @@ class AlbumPage extends StatelessWidget {
     );
   }
 
+  void _showAnnouncement(BuildContext context, String message) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            style: const TextStyle(color: Colors.white),
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          margin: EdgeInsets.fromLTRB(16, 0, 16, bottomInset + 110),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+  }
+
+  Future<void> _downloadSong(BuildContext context, Song song) async {
+    final audioUrl = (song.audioUrl ?? '').trim();
+    if (audioUrl.isEmpty) {
+      if (!context.mounted) return;
+      _showAnnouncement(context, 'No downloadable audio for "${song.title}"');
+      return;
+    }
+
+    try {
+      final result = await SongDownloadService.downloadSong(song);
+      if (!context.mounted) return;
+      final message = result.alreadyExists
+          ? 'Already downloaded: ${song.title}'
+          : 'Downloaded: ${song.title}';
+      _showAnnouncement(context, message);
+    } catch (error) {
+      if (!context.mounted) return;
+      _showAnnouncement(context, 'Failed to download "${song.title}": $error');
+    }
+  }
+
+  Future<void> _downloadAllSongs(BuildContext context, List<Song> songs) async {
+    if (songs.isEmpty) return;
+    if (!context.mounted) return;
+    _showAnnouncement(context, 'Downloading ${songs.length} songs...');
+
+    int downloaded = 0;
+    int alreadyExists = 0;
+    int failed = 0;
+
+    for (final song in songs) {
+      final audioUrl = (song.audioUrl ?? '').trim();
+      if (audioUrl.isEmpty) {
+        failed++;
+        continue;
+      }
+      try {
+        final result = await SongDownloadService.downloadSong(song);
+        if (result.alreadyExists) {
+          alreadyExists++;
+        } else {
+          downloaded++;
+        }
+      } catch (_) {
+        failed++;
+      }
+    }
+
+    if (!context.mounted) return;
+    _showAnnouncement(
+      context,
+      'Download all done. New: $downloaded, Existing: $alreadyExists, Failed: $failed',
+    );
+  }
+
+  void _addToQueue(
+    BuildContext context,
+    Song song, {
+    required bool playNext,
+  }) {
+    final session = PlayerSession.instance;
+    final queue = session.queue.toList();
+    final currentSong = session.currentSong;
+    final songKey = _songKey(song);
+    queue.removeWhere((item) => _songKey(item) == songKey);
+
+    if (queue.isEmpty) {
+      queue.add(song);
+      session.setQueue(queue, currentSong: song);
+      session.playSong(song);
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => PlayerScreen(song: song)),
+      );
+      return;
+    }
+
+    if (playNext && currentSong != null) {
+      final currentKey = _songKey(currentSong);
+      final index = queue.indexWhere((item) => _songKey(item) == currentKey);
+      if (index >= 0) {
+        queue.insert(index + 1, song);
+      } else {
+        queue.add(song);
+      }
+    } else {
+      queue.add(song);
+    }
+
+    session.setQueue(queue, currentSong: currentSong ?? queue.first);
+    _showAnnouncement(
+      context,
+      playNext ? 'Will play next: ${song.title}' : 'Added to queue: ${song.title}',
+    );
+  }
+
+  String _songKey(Song song) {
+    final id = song.id.trim();
+    if (id.isNotEmpty) return 'id:$id';
+    final audio = (song.audioUrl ?? '').trim();
+    if (audio.isNotEmpty) return 'audio:$audio';
+    return 'meta:${song.title.trim()}|${song.artist.trim()}|${song.album.trim()}';
+  }
+
+  void _playSongNow(BuildContext context, Song song, List<Song> songs) {
+    final session = PlayerSession.instance;
+    session.setQueue(songs, currentSong: song);
+    session.playSong(song);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PlayerScreen(song: song)),
+    );
+  }
+
+  Future<void> _onSongMenuSelected(
+    BuildContext context,
+    Song song,
+    List<Song> songs,
+    _SongMenuAction action,
+  ) async {
+    switch (action) {
+      case _SongMenuAction.playNow:
+        _playSongNow(context, song, songs);
+        return;
+      case _SongMenuAction.playNext:
+        _addToQueue(context, song, playNext: true);
+        return;
+      case _SongMenuAction.addToQueue:
+        _addToQueue(context, song, playNext: false);
+        return;
+      case _SongMenuAction.download:
+        await _downloadSong(context, song);
+        return;
+    }
+  }
+
+  Future<void> _openSongOptionsSheet(
+    BuildContext context,
+    Song song,
+    List<Song> songs,
+  ) async {
+    final action = await showModalBottomSheet<_SongMenuAction>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.60),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.20),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.35),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          song.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _sheetActionTile(
+                          context: sheetContext,
+                          icon: Icons.play_arrow_rounded,
+                          label: 'Play now',
+                          action: _SongMenuAction.playNow,
+                        ),
+                        _sheetActionTile(
+                          context: sheetContext,
+                          icon: Icons.queue_play_next_rounded,
+                          label: 'Play next',
+                          action: _SongMenuAction.playNext,
+                        ),
+                        _sheetActionTile(
+                          context: sheetContext,
+                          icon: Icons.queue_music_rounded,
+                          label: 'Add to queue',
+                          action: _SongMenuAction.addToQueue,
+                        ),
+                        _sheetActionTile(
+                          context: sheetContext,
+                          icon: Icons.download_rounded,
+                          label: 'Download',
+                          action: _SongMenuAction.download,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (action == null || !context.mounted) return;
+    await _onSongMenuSelected(context, song, songs, action);
+  }
+
+  Widget _sheetActionTile({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required _SongMenuAction action,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => Navigator.pop(context, action),
+          child: Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _songTile(
     BuildContext context,
     Song song,
@@ -217,15 +504,7 @@ class AlbumPage extends StatelessWidget {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () {
-                final session = PlayerSession.instance;
-                session.setQueue(songs, currentSong: song);
-                session.playSong(song);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => PlayerScreen(song: song)),
-                );
-              },
+              onTap: () => _playSongNow(context, song, songs),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -306,9 +585,24 @@ class AlbumPage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Icon(
-                      Icons.more_horiz_rounded,
-                      color: Colors.white.withValues(alpha: 0.78),
+                    SizedBox(
+                      width: 30,
+                      height: 30,
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        splashRadius: 18,
+                        onPressed: () => _openSongOptionsSheet(
+                          context,
+                          song,
+                          songs,
+                        ),
+                        icon: Icon(
+                          Icons.more_vert_rounded,
+                          color: Colors.white.withValues(alpha: 0.78),
+                          size: 20,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -441,6 +735,48 @@ class AlbumPage extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _downloadAllSongs(context, songs),
+                        child: Container(
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.20),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.download_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Download all',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 22),
                 Text(
                   'Tracks',
@@ -527,3 +863,5 @@ class AlbumPage extends StatelessWidget {
     );
   }
 }
+
+enum _SongMenuAction { playNow, playNext, addToQueue, download }

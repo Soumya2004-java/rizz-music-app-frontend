@@ -41,9 +41,8 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       navigatorKey: appNavigatorKey,
       navigatorObservers: [appRouteObserver],
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
+      theme: AppTheme.dark(),
+      themeMode: ThemeMode.dark,
       home: ValueListenableBuilder<UserAccount?>(
         valueListenable: AuthStore.currentUser,
         builder: (context, user, _) {
@@ -52,10 +51,7 @@ class MyApp extends StatelessWidget {
         },
       ),
       builder: (context, child) {
-        final isLight = Theme.of(context).brightness == Brightness.light;
-        final globalTextColor = isLight
-            ? Colors.black54
-            : const Color(0xFFB7BFCE);
+        const globalTextColor = Color(0xFFB7BFCE);
         return Stack(
           children: [
             DefaultTextStyle.merge(

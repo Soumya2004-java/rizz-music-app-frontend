@@ -46,21 +46,6 @@ class SongApi {
     }
 
     try {
-      final cacheSnapshot = await FirebaseFirestore.instance
-          .collectionGroup('songs')
-          .get(const GetOptions(source: Source.cache));
-      if (cacheSnapshot.docs.isNotEmpty) {
-        final cachedSongs = await Future.wait(
-          cacheSnapshot.docs.map(_songFromDoc),
-        );
-        cachedSongs.sort(
-          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
-        );
-        return cachedSongs;
-      }
-    } catch (_) {}
-
-    try {
       final snapshot = await FirebaseFirestore.instance
           .collectionGroup('songs')
           .get();
@@ -69,8 +54,32 @@ class SongApi {
         (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
       );
       return songs;
-    } catch (e) {
+    } catch (_) {
+      // Fallback to collection-group cache if network/server fetch fails.
+      try {
+        final cacheSnapshot = await FirebaseFirestore.instance
+            .collectionGroup('songs')
+            .get(const GetOptions(source: Source.cache));
+        if (cacheSnapshot.docs.isNotEmpty) {
+          final cachedSongs = await Future.wait(
+            cacheSnapshot.docs.map(_songFromDoc),
+          );
+          cachedSongs.sort(
+            (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+          );
+          return cachedSongs;
+        }
+      } catch (_) {}
+
       // Fallback to top-level songs collection.
+      try {
+        final fallback = await FirebaseFirestore.instance
+            .collection('songs')
+            .orderBy('title')
+            .get();
+        return Future.wait(fallback.docs.map(_songFromDoc));
+      } catch (_) {}
+
       try {
         final fallbackCache = await FirebaseFirestore.instance
             .collection('songs')
@@ -79,18 +88,11 @@ class SongApi {
         if (fallbackCache.docs.isNotEmpty) {
           return Future.wait(fallbackCache.docs.map(_songFromDoc));
         }
-      } catch (_) {}
-
-      try {
-        final fallback = await FirebaseFirestore.instance
-            .collection('songs')
-            .orderBy('title')
-            .get();
-
-        return Future.wait(fallback.docs.map(_songFromDoc));
       } catch (_) {
         return const <Song>[];
       }
+
+      return const <Song>[];
     }
   }
 
@@ -108,7 +110,13 @@ class SongApi {
       songs.sort(
         (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
       );
-      return songs;
+
+      if (songs.isNotEmpty) return songs;
+
+      final allSongs = await fetchSongs();
+      return allSongs
+          .where((song) => song.album.toLowerCase() == normalized.toLowerCase())
+          .toList();
     } catch (_) {
       final allSongs = await fetchSongs();
       return allSongs

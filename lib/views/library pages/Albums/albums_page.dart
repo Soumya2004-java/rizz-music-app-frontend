@@ -101,16 +101,7 @@ class AlbumsPage extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AlbumPage(
-              artist: album.artist,
-              albumTitle: album.title,
-              albumCover: album.imageUrl,
-            ),
-          ),
-        );
+        _openAlbum(context, album);
       },
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -134,14 +125,20 @@ class AlbumsPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    album.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isLight ? Colors.black : Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          album.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isLight ? Colors.black : Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -177,17 +174,36 @@ class AlbumsPage extends StatelessWidget {
   Widget _albumImage(String imageUrl) {
     final source = imageUrl.trim();
     if (source.startsWith('http://') || source.startsWith('https://')) {
-      return AppCachedImage(url: source, fit: BoxFit.cover);
+      return Container(
+        color: Colors.black.withValues(alpha: 0.22),
+        child: AppCachedImage(url: source, fit: BoxFit.contain),
+      );
     }
 
     if (source.isNotEmpty) {
-      return Image.asset(
-        source,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _fallback(),
+      return Container(
+        color: Colors.black.withValues(alpha: 0.22),
+        child: Image.asset(
+          source,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => _fallback(),
+        ),
       );
     }
 
     return _fallback();
+  }
+
+  void _openAlbum(BuildContext context, AlbumSummary album) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AlbumPage(
+          artist: album.artist,
+          albumTitle: album.title,
+          albumCover: album.imageUrl,
+        ),
+      ),
+    );
   }
 }

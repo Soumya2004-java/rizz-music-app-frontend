@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../songs/songs.dart';
@@ -134,6 +135,22 @@ class SongDownloadService {
     }
   }
 
+  static Future<File> saveDownloadedSongToDevice(DownloadedSong song) async {
+    final sourceFile = File(song.filePath);
+    if (!await sourceFile.exists()) {
+      throw const SongDownloadException('Downloaded file no longer exists.');
+    }
+
+    final targetDir = await _deviceSaveDirectory();
+    await targetDir.create(recursive: true);
+
+    final sourceName = sourceFile.uri.pathSegments.isNotEmpty
+        ? sourceFile.uri.pathSegments.last
+        : 'track.mp3';
+    final targetPath = await _uniqueTargetPath(targetDir, sourceName);
+    return sourceFile.copy(targetPath);
+  }
+
   static DownloadedSong _toDownloadedSong(File file) {
     final fileName = file.uri.pathSegments.isNotEmpty
         ? file.uri.pathSegments.last
@@ -229,12 +246,83 @@ class SongDownloadService {
       }
     }
 
-    // Asset path already exists in app bundle.
-    return raw;
+    if (raw.startsWith('assets/')) {
+      return _copyAssetCoverToLocal(song, songsDir, raw);
+    }
+
+    return null;
+  }
+
+  static Future<String?> _copyAssetCoverToLocal(
+    Song song,
+    Directory songsDir,
+    String assetPath,
+  ) async {
+    try {
+      final ext = _extensionFromUrl(assetPath, defaultExt: '.jpg');
+      final coverFileName =
+          '${_safeFilePart(song.title)}_${_safeFilePart(song.artist)}_cover$ext';
+      final coverFile = File(
+        '${songsDir.path}${Platform.pathSeparator}$coverFileName',
+      );
+      if (await coverFile.exists()) return coverFile.path;
+
+      final data = await rootBundle.load(assetPath);
+      await coverFile.writeAsBytes(
+        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+        flush: true,
+      );
+      return coverFile.path;
+    } catch (_) {
+      // If copy fails, fallback to asset path so UI can still render.
+      return assetPath;
+    }
   }
 
   static String _metadataPathFor(String audioFilePath) {
     return audioFilePath.replaceFirst(RegExp(r'\.[^.]+$'), '.json');
+  }
+
+  static Future<Directory> _deviceSaveDirectory() async {
+    final downloadsDir = await getDownloadsDirectory();
+    if (downloadsDir != null) {
+      return downloadsDir;
+    }
+
+    if (Platform.isAndroid) {
+      final dirs = await getExternalStorageDirectories(
+        type: StorageDirectory.downloads,
+      );
+      if (dirs != null && dirs.isNotEmpty) {
+        return dirs.first;
+      }
+    }
+
+    throw const SongDownloadException(
+      'Unable to access a public Downloads folder on this device.',
+    );
+  }
+
+  static Future<String> _uniqueTargetPath(
+    Directory directory,
+    String fileName,
+  ) async {
+    final extensionMatch = RegExp(r'(\.[^.]+)$').firstMatch(fileName);
+    final extension = extensionMatch?.group(1) ?? '';
+    final baseName = extension.isEmpty
+        ? fileName
+        : fileName.substring(0, fileName.length - extension.length);
+
+    var candidate = File('${directory.path}${Platform.pathSeparator}$fileName');
+    if (!await candidate.exists()) return candidate.path;
+
+    var index = 1;
+    while (true) {
+      final nextName = '$baseName ($index)$extension';
+      candidate = File('${directory.path}${Platform.pathSeparator}$nextName');
+      if (!await candidate.exists()) return candidate.path;
+      index++;
+    }
   }
 
   static String? _stringOrNull(dynamic value) {
