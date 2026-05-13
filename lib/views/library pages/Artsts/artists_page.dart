@@ -8,10 +8,31 @@ import '../../../songs/albums/album_page.dart';
 import '../../../widgets/app_cached_image.dart';
 import '../../../widgets/app_skeletons.dart';
 
-class ArtistPage extends StatelessWidget {
+class ArtistPage extends StatefulWidget {
   const ArtistPage({super.key, this.selectedArtists = const []});
 
   final List<Map<String, String>> selectedArtists;
+
+  @override
+  State<ArtistPage> createState() => _ArtistPageState();
+}
+
+class _ArtistPageState extends State<ArtistPage> {
+  late Future<List<ArtistSummary>> _artistsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _artistsFuture = MusicRepository.fetchArtists();
+  }
+
+  Future<void> _refresh() async {
+    MusicRepository.clearCaches();
+    setState(() {
+      _artistsFuture = MusicRepository.fetchArtists();
+    });
+    await _artistsFuture;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +56,7 @@ class ArtistPage extends StatelessWidget {
             ),
           ),
           FutureBuilder<List<ArtistSummary>>(
-            future: MusicRepository.fetchArtists(),
+            future: _artistsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const GridPageSkeleton();
@@ -55,41 +76,49 @@ class ArtistPage extends StatelessWidget {
 
               final artists = snapshot.data ?? const <ArtistSummary>[];
 
-              return CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  SliverAppBar(
-                    pinned: true,
-                    backgroundColor: Colors.black.withValues(alpha: 0.16),
-                    title: const Text('Artists'),
+              return RefreshIndicator(
+                onRefresh: _refresh,
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
                   ),
-                  if (artists.isEmpty)
-                    const SliverFillRemaining(
-                      child: Center(
-                        child: Text(
-                          'No artists found in Firestore',
-                          style: TextStyle(color: Colors.white70),
+                  slivers: [
+                    SliverAppBar(
+                      pinned: true,
+                      backgroundColor: Colors.black.withValues(alpha: 0.16),
+                      title: const Text('Artists'),
+                    ),
+                    if (artists.isEmpty)
+                      const SliverFillRemaining(
+                        child: Center(
+                          child: Text(
+                            'No artists found in Firestore',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                childAspectRatio: 0.78,
+                              ),
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final artist = artists[index];
+                            return _artistCard(context, artist);
+                          }, childCount: artists.length),
                         ),
                       ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                      sliver: SliverGrid(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: 0.78,
-                            ),
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          final artist = artists[index];
-                          return _artistCard(context, artist);
-                        }, childCount: artists.length),
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               );
             },
           ),

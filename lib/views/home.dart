@@ -8,8 +8,29 @@ import '../views/profile/profile.dart';
 import '../widgets/app_cached_image.dart';
 import '../widgets/app_skeletons.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late Future<List<AlbumSummary>> _albumsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _albumsFuture = MusicRepository.fetchAlbums();
+  }
+
+  Future<void> _refresh() async {
+    MusicRepository.clearCaches();
+    setState(() {
+      _albumsFuture = MusicRepository.fetchAlbums();
+    });
+    await _albumsFuture;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +57,7 @@ class HomePage extends StatelessWidget {
             top: false,
             bottom: false,
             child: FutureBuilder<List<AlbumSummary>>(
-              future: MusicRepository.fetchAlbums(),
+              future: _albumsFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const HomePageSkeleton();
@@ -74,60 +95,65 @@ class HomePage extends StatelessWidget {
                   );
                 });
 
-                return CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: _HomeHeader(
-                        onProfileTap: () => _openProfile(context),
-                        onNotificationsTap: () => _openNotifications(context),
-                      ),
+                return RefreshIndicator(
+                  onRefresh: _refresh,
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
                     ),
-                    SliverToBoxAdapter(
-                      child: SizedBox(
-                        height: 248,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: featured.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 14),
-                          itemBuilder: (context, index) => _staggerReveal(
-                            index: index,
-                            child: _featuredTile(context, featured[index]),
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: _HomeHeader(
+                          onProfileTap: () => _openProfile(context),
+                          onNotificationsTap: () => _openNotifications(context),
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: 248,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: featured.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 14),
+                            itemBuilder: (context, index) => _staggerReveal(
+                              index: index,
+                              child: _featuredTile(context, featured[index]),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    SliverList(
-                      delegate: SliverChildListDelegate.fixed([
-                        _horizontalSection(
-                          context: context,
-                          title: 'Made for You',
-                          subtitle: 'Curated from your recent favorites',
-                          albums: albums.take(10).toList(),
-                          onSeeAll: () => _openAllAlbums(context),
-                        ),
-                        const SizedBox(height: 14),
-                        _horizontalSection(
-                          context: context,
-                          title: 'Popular Right Now',
-                          subtitle: 'Trending picks across your library',
-                          albums: albums.skip(4).take(10).toList(),
-                          onSeeAll: () => _openAllAlbums(context),
-                        ),
-                        const SizedBox(height: 14),
-                        _horizontalSection(
-                          context: context,
-                          title: 'Browse Albums',
-                          subtitle: 'Dive into full collections',
-                          albums: albums,
-                          onSeeAll: () => _openAllAlbums(context),
-                        ),
-                      ]),
-                    ),
-                  ],
+                      SliverList(
+                        delegate: SliverChildListDelegate.fixed([
+                          _horizontalSection(
+                            context: context,
+                            title: 'Made for You',
+                            subtitle: 'Curated from your recent favorites',
+                            albums: albums.take(10).toList(),
+                            onSeeAll: () => _openAllAlbums(context),
+                          ),
+                          const SizedBox(height: 14),
+                          _horizontalSection(
+                            context: context,
+                            title: 'Popular Right Now',
+                            subtitle: 'Trending picks across your library',
+                            albums: albums.skip(4).take(10).toList(),
+                            onSeeAll: () => _openAllAlbums(context),
+                          ),
+                          const SizedBox(height: 14),
+                          _horizontalSection(
+                            context: context,
+                            title: 'Browse Albums',
+                            subtitle: 'Dive into full collections',
+                            albums: albums,
+                            onSeeAll: () => _openAllAlbums(context),
+                          ),
+                        ]),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),

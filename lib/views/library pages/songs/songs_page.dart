@@ -9,11 +9,35 @@ import '../../../widgets/app_skeletons.dart';
 import '../../player/player_scrreen.dart';
 import '../../player/player_session.dart';
 
-class SongsPage extends StatelessWidget {
+class SongsPage extends StatefulWidget {
   const SongsPage({super.key, this.title = 'All Songs', this.songsOverride});
 
   final String title;
   final List<Song>? songsOverride;
+
+  @override
+  State<SongsPage> createState() => _SongsPageState();
+}
+
+class _SongsPageState extends State<SongsPage> {
+  late Future<List<Song>> _songsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _songsFuture = widget.songsOverride != null
+        ? Future.value(widget.songsOverride!)
+        : MusicRepository.fetchSongs();
+  }
+
+  Future<void> _refresh() async {
+    if (widget.songsOverride != null) return;
+    MusicRepository.clearCaches();
+    setState(() {
+      _songsFuture = MusicRepository.fetchSongs();
+    });
+    await _songsFuture;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,9 +61,7 @@ class SongsPage extends StatelessWidget {
             ),
           ),
           FutureBuilder<List<Song>>(
-            future: songsOverride != null
-                ? Future.value(songsOverride!)
-                : MusicRepository.fetchSongs(),
+            future: _songsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const ListPageSkeleton();
@@ -59,38 +81,43 @@ class SongsPage extends StatelessWidget {
 
               final songs = snapshot.data ?? const <Song>[];
 
-              return CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  SliverAppBar(
-                    pinned: true,
-                    backgroundColor: Colors.black.withValues(alpha: 0.16),
-                    title: Text(title),
+              return RefreshIndicator(
+                onRefresh: _refresh,
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
                   ),
-                  if (songs.isEmpty)
-                    const SliverFillRemaining(
-                      child: Center(
-                        child: Text(
-                          'No songs found in Firestore',
-                          style: TextStyle(color: Colors.white70),
+                  slivers: [
+                    SliverAppBar(
+                      pinned: true,
+                      backgroundColor: Colors.black.withValues(alpha: 0.16),
+                      title: Text(widget.title),
+                    ),
+                    if (songs.isEmpty)
+                      const SliverFillRemaining(
+                        child: Center(
+                          child: Text(
+                            'No songs found in Firestore',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                        sliver: SliverList.builder(
+                          itemCount: songs.length,
+                          itemBuilder: (context, index) {
+                            final song = songs[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _songTile(context, song, songs),
+                            );
+                          },
                         ),
                       ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                      sliver: SliverList.builder(
-                        itemCount: songs.length,
-                        itemBuilder: (context, index) {
-                          final song = songs[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _songTile(context, song, songs),
-                          );
-                        },
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               );
             },
           ),

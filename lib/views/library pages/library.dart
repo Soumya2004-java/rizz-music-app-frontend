@@ -13,8 +13,32 @@ import '../../widgets/app_skeletons.dart';
 import '../player/player_session.dart';
 import 'download/download_page.dart';
 
-class LibraryPage extends StatelessWidget {
+class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
+
+  @override
+  State<LibraryPage> createState() => _LibraryPageState();
+}
+
+class _LibraryPageState extends State<LibraryPage> {
+  late Future<LibraryStats> _libraryStatsFuture;
+  late Future<List<Song>> _likedSongsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _libraryStatsFuture = MusicRepository.fetchLibraryStats();
+    _likedSongsFuture = _fetchLikedSongs();
+  }
+
+  Future<void> _refresh() async {
+    MusicRepository.clearCaches();
+    setState(() {
+      _libraryStatsFuture = MusicRepository.fetchLibraryStats();
+      _likedSongsFuture = _fetchLikedSongs();
+    });
+    await Future.wait([_libraryStatsFuture, _likedSongsFuture]);
+  }
 
   Future<void> _openLikedSongs(BuildContext context) async {
     final allSongs = await MusicRepository.fetchSongs();
@@ -65,7 +89,7 @@ class LibraryPage extends StatelessWidget {
           ),
           SafeArea(
             child: FutureBuilder<LibraryStats>(
-              future: MusicRepository.fetchLibraryStats(),
+              future: _libraryStatsFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const ListPageSkeleton();
@@ -92,246 +116,250 @@ class LibraryPage extends StatelessWidget {
                       playlists: 0,
                     );
 
-                return ListView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
-                  children: [
-                    Text(
-                      'Library',
-                      style: TextStyle(
-                        color: primaryText,
-                        fontSize: 34,
-                        fontWeight: FontWeight.w700,
-                      ),
+                return RefreshIndicator(
+                  onRefresh: _refresh,
+                  child: ListView(
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
                     ),
-                    const SizedBox(height: 14),
-                    _glassPanel(
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _statTile(
-                                  value: '${stats.songs}',
-                                  label: 'Songs',
-                                  icon: Icons.music_note_rounded,
-                                  primaryText: primaryText,
-                                  secondaryText: secondaryText,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _statTile(
-                                  value: '${stats.albums}',
-                                  label: 'Albums',
-                                  icon: Icons.album_rounded,
-                                  primaryText: primaryText,
-                                  secondaryText: secondaryText,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _statTile(
-                                  value: '${stats.artists}',
-                                  label: 'Artists',
-                                  icon: Icons.person_rounded,
-                                  primaryText: primaryText,
-                                  secondaryText: secondaryText,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _statTile(
-                                  value: '${stats.playlists}',
-                                  label: 'Playlists',
-                                  icon: Icons.queue_music_rounded,
-                                  primaryText: primaryText,
-                                  secondaryText: secondaryText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+                    children: [
+                      Text(
+                        'Library',
+                        style: TextStyle(
+                          color: primaryText,
+                          fontSize: 34,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    _glassPanel(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      child: Column(
-                        children: [
-                          _staggerReveal(
-                            index: 0,
-                            child: _entryTile(
-                              icon: Icons.library_music_rounded,
-                              title: 'Songs',
-                              subtitle: 'All Firebase songs',
-                              primaryText: primaryText,
-                              secondaryText: secondaryText,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const SongsPage(),
-                                ),
-                              ),
-                            ),
-                          ),
-                          _staggerReveal(
-                            index: 1,
-                            child: _entryTile(
-                              icon: Icons.album_rounded,
-                              title: 'Albums',
-                              subtitle: 'Grouped by album name',
-                              primaryText: primaryText,
-                              secondaryText: secondaryText,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const AlbumsPage(),
-                                ),
-                              ),
-                            ),
-                          ),
-                          _staggerReveal(
-                            index: 2,
-                            child: _entryTile(
-                              icon: Icons.people_alt_rounded,
-                              title: 'Artists',
-                              subtitle: 'Grouped by artist name',
-                              primaryText: primaryText,
-                              secondaryText: secondaryText,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const ArtistPage(),
-                                ),
-                              ),
-                            ),
-                          ),
-                          _staggerReveal(
-                            index: 3,
-                            child: _entryTile(
-                              icon: Icons.queue_music_rounded,
-                              title: 'Playlists',
-                              subtitle: 'From Firestore playlists collection',
-                              primaryText: primaryText,
-                              secondaryText: secondaryText,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const PlaylistPage(
-                                    playlistName: '',
-                                    songs: [],
+                      const SizedBox(height: 14),
+                      _glassPanel(
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _statTile(
+                                    value: '${stats.songs}',
+                                    label: 'Songs',
+                                    icon: Icons.music_note_rounded,
+                                    primaryText: primaryText,
+                                    secondaryText: secondaryText,
                                   ),
                                 ),
-                              ),
-                            ),
-                          ),
-                          _staggerReveal(
-                            index: 4,
-                            child: _entryTile(
-                              icon: Icons.download_rounded,
-                              title: 'Downloads',
-                              subtitle: 'Local/offline files',
-                              primaryText: primaryText,
-                              secondaryText: secondaryText,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const DownloadPage(),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    _glassPanel(
-                      child: FutureBuilder<List<Song>>(
-                        future: _fetchLikedSongs(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const SizedBox(
-                              height: 86,
-                              child: AppSkeletonBox(
-                                height: 86,
-                                radius: 14,
-                              ),
-                            );
-                          }
-
-                          final likedSongs = snapshot.data ?? const <Song>[];
-                          if (likedSongs.isEmpty) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Text(
-                                'No liked songs yet',
-                                style: TextStyle(color: secondaryText),
-                              ),
-                            );
-                          }
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Liked Songs',
-                                style: TextStyle(
-                                  color: primaryText,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              SizedBox(
-                                height: 168,
-                                child: ListView.separated(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: likedSongs.length.clamp(0, 10),
-                                  separatorBuilder: (_, __) =>
-                                      const SizedBox(width: 10),
-                                  itemBuilder: (context, index) {
-                                    final song = likedSongs[index];
-                                    return _staggerReveal(
-                                      index: index,
-                                      child: _likedSongCard(
-                                        context,
-                                        song,
-                                        likedSongs,
-                                        primaryText: primaryText,
-                                        secondaryText: secondaryText,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              if (likedSongs.length > 6) ...[
-                                const SizedBox(height: 8),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton(
-                                    onPressed: () => _openLikedSongs(context),
-                                    child: Text(
-                                      'View all',
-                                      style: TextStyle(color: primaryText),
-                                    ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _statTile(
+                                    value: '${stats.albums}',
+                                    label: 'Albums',
+                                    icon: Icons.album_rounded,
+                                    primaryText: primaryText,
+                                    secondaryText: secondaryText,
                                   ),
                                 ),
                               ],
-                            ],
-                          );
-                        },
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _statTile(
+                                    value: '${stats.artists}',
+                                    label: 'Artists',
+                                    icon: Icons.person_rounded,
+                                    primaryText: primaryText,
+                                    secondaryText: secondaryText,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _statTile(
+                                    value: '${stats.playlists}',
+                                    label: 'Playlists',
+                                    icon: Icons.queue_music_rounded,
+                                    primaryText: primaryText,
+                                    secondaryText: secondaryText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 14),
+                      _glassPanel(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        child: Column(
+                          children: [
+                            _staggerReveal(
+                              index: 0,
+                              child: _entryTile(
+                                icon: Icons.library_music_rounded,
+                                title: 'Songs',
+                                subtitle: 'All Firebase songs',
+                                primaryText: primaryText,
+                                secondaryText: secondaryText,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const SongsPage(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            _staggerReveal(
+                              index: 1,
+                              child: _entryTile(
+                                icon: Icons.album_rounded,
+                                title: 'Albums',
+                                subtitle: 'Grouped by album name',
+                                primaryText: primaryText,
+                                secondaryText: secondaryText,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const AlbumsPage(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            _staggerReveal(
+                              index: 2,
+                              child: _entryTile(
+                                icon: Icons.people_alt_rounded,
+                                title: 'Artists',
+                                subtitle: 'Grouped by artist name',
+                                primaryText: primaryText,
+                                secondaryText: secondaryText,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const ArtistPage(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            _staggerReveal(
+                              index: 3,
+                              child: _entryTile(
+                                icon: Icons.queue_music_rounded,
+                                title: 'Playlists',
+                                subtitle: 'From Firestore playlists collection',
+                                primaryText: primaryText,
+                                secondaryText: secondaryText,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const PlaylistPage(
+                                      playlistName: '',
+                                      songs: [],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            _staggerReveal(
+                              index: 4,
+                              child: _entryTile(
+                                icon: Icons.download_rounded,
+                                title: 'Downloads',
+                                subtitle: 'Local/offline files',
+                                primaryText: primaryText,
+                                secondaryText: secondaryText,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const DownloadPage(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _glassPanel(
+                        child: FutureBuilder<List<Song>>(
+                          future: _likedSongsFuture,
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const SizedBox(
+                                height: 86,
+                                child: AppSkeletonBox(height: 86, radius: 14),
+                              );
+                            }
+
+                            final likedSongs = snapshot.data ?? const <Song>[];
+                            if (likedSongs.isEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                ),
+                                child: Text(
+                                  'No liked songs yet',
+                                  style: TextStyle(color: secondaryText),
+                                ),
+                              );
+                            }
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Liked Songs',
+                                  style: TextStyle(
+                                    color: primaryText,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  height: 168,
+                                  child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: likedSongs.length.clamp(0, 10),
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(width: 10),
+                                    itemBuilder: (context, index) {
+                                      final song = likedSongs[index];
+                                      return _staggerReveal(
+                                        index: index,
+                                        child: _likedSongCard(
+                                          context,
+                                          song,
+                                          likedSongs,
+                                          primaryText: primaryText,
+                                          secondaryText: secondaryText,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                if (likedSongs.length > 6) ...[
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      onPressed: () => _openLikedSongs(context),
+                                      child: Text(
+                                        'View all',
+                                        style: TextStyle(color: primaryText),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),

@@ -101,6 +101,15 @@ class ProfileStore {
     _onAuthChanged();
   }
 
+  static Future<void> refresh() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      profile.value = ProfileData.empty;
+      return;
+    }
+    await _loadForUser(user);
+  }
+
   static void _onAuthChanged() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {

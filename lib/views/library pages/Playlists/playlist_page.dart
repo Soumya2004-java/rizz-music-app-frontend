@@ -10,7 +10,7 @@ import '../../../widgets/app_skeletons.dart';
 import '../../player/player_scrreen.dart';
 import '../../player/player_session.dart';
 
-class PlaylistPage extends StatelessWidget {
+class PlaylistPage extends StatefulWidget {
   const PlaylistPage({
     super.key,
     required this.playlistName,
@@ -19,6 +19,27 @@ class PlaylistPage extends StatelessWidget {
 
   final String playlistName;
   final List<Map<String, String>> songs;
+
+  @override
+  State<PlaylistPage> createState() => _PlaylistPageState();
+}
+
+class _PlaylistPageState extends State<PlaylistPage> {
+  late Future<List<PlaylistSummary>> _playlistsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _playlistsFuture = MusicRepository.fetchPlaylists();
+  }
+
+  Future<void> _refresh() async {
+    MusicRepository.clearCaches();
+    setState(() {
+      _playlistsFuture = MusicRepository.fetchPlaylists();
+    });
+    await _playlistsFuture;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +63,7 @@ class PlaylistPage extends StatelessWidget {
             ),
           ),
           FutureBuilder<List<PlaylistSummary>>(
-            future: MusicRepository.fetchPlaylists(),
+            future: _playlistsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const ListPageSkeleton();
@@ -61,53 +82,58 @@ class PlaylistPage extends StatelessWidget {
               }
 
               var playlists = snapshot.data ?? const <PlaylistSummary>[];
-              final selectedName = playlistName.trim().toLowerCase();
+              final selectedName = widget.playlistName.trim().toLowerCase();
               if (selectedName.isNotEmpty) {
                 playlists = playlists
                     .where((p) => p.name.toLowerCase() == selectedName)
                     .toList();
               }
 
-              return CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  SliverAppBar(
-                    pinned: true,
-                    backgroundColor: Colors.black.withValues(alpha: 0.16),
-                    title: Text(
-                      playlistName.trim().isEmpty
-                          ? 'Playlists'
-                          : playlistName.trim(),
-                    ),
+              return RefreshIndicator(
+                onRefresh: _refresh,
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
                   ),
-                  if (playlists.isEmpty)
-                    const SliverFillRemaining(
-                      child: Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(18),
-                          child: Text(
-                            'No playlists found. Create Firestore collection: playlists with fields: name, imageUrl, description, songIds.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white70),
+                  slivers: [
+                    SliverAppBar(
+                      pinned: true,
+                      backgroundColor: Colors.black.withValues(alpha: 0.16),
+                      title: Text(
+                        widget.playlistName.trim().isEmpty
+                            ? 'Playlists'
+                            : widget.playlistName.trim(),
+                      ),
+                    ),
+                    if (playlists.isEmpty)
+                      const SliverFillRemaining(
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(18),
+                            child: Text(
+                              'No playlists found. Create Firestore collection: playlists with fields: name, imageUrl, description, songIds.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white70),
+                            ),
                           ),
                         ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                        sliver: SliverList.builder(
+                          itemCount: playlists.length,
+                          itemBuilder: (context, index) {
+                            final playlist = playlists[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _playlistTile(context, playlist),
+                            );
+                          },
+                        ),
                       ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                      sliver: SliverList.builder(
-                        itemCount: playlists.length,
-                        itemBuilder: (context, index) {
-                          final playlist = playlists[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _playlistTile(context, playlist),
-                          );
-                        },
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               );
             },
           ),

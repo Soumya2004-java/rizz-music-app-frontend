@@ -7,8 +7,18 @@ import 'settings/edit profile /edit_profile.dart';
 import 'settings/profile_store.dart';
 import 'settings/settings.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  Future<void> _refresh() async {
+    await ProfileStore.refresh();
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,112 +56,120 @@ class ProfilePage extends StatelessWidget {
                   ? AuthStore.currentUser.value!.email
                   : 'Not available';
 
-              return ListView(
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  MediaQuery.of(context).padding.top + 16,
-                  16,
-                  120,
-                ),
-                children: [
-                  _heroCard(
-                    profile: profile,
-                    primaryText: primaryText,
-                    secondaryText: secondaryText,
-                    cardSurface: cardSurface,
+              return RefreshIndicator(
+                onRefresh: _refresh,
+                child: ListView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
                   ),
-                  const SizedBox(height: 12),
-                  _quickStats(
-                    profile: profile,
-                    primaryText: primaryText,
-                    secondaryText: secondaryText,
-                    cardSurface: cardSurface,
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    MediaQuery.of(context).padding.top + 16,
+                    16,
+                    120,
                   ),
-                  const SizedBox(height: 12),
-                  _panel(
-                    title: 'About',
-                    primaryText: primaryText,
-                    secondaryText: secondaryText,
-                    cardSurface: cardSurface,
-                    children: [
-                      _line(
-                        'Bio',
-                        profile.bio.isEmpty ? 'Not set' : profile.bio,
-                        primaryText: primaryText,
-                        secondaryText: secondaryText,
-                      ),
-                      _line(
-                        'Favorite Genre',
-                        profile.favoriteGenre.isEmpty
-                            ? 'Not set'
-                            : profile.favoriteGenre,
-                        primaryText: primaryText,
-                        secondaryText: secondaryText,
-                      ),
-                      _line(
-                        'Favorite Artist',
-                        profile.favoriteArtist.isEmpty
-                            ? 'Not set'
-                            : profile.favoriteArtist,
-                        primaryText: primaryText,
-                        secondaryText: secondaryText,
-                      ),
-                      _line(
-                        'Location',
-                        profile.location.isEmpty ? 'Not set' : profile.location,
-                        primaryText: primaryText,
-                        secondaryText: secondaryText,
-                      ),
-                      _line(
-                        'Email',
-                        email,
-                        primaryText: primaryText,
-                        secondaryText: secondaryText,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _primaryAction(
-                          icon: Icons.edit_outlined,
-                          title: 'Edit Profile',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const EditProfilePage(),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _outlineAction(
-                          icon: Icons.settings_outlined,
-                          title: 'Settings',
-                          primaryText: primaryText,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const SettingsPage(),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _actionTile(
-                    icon: Icons.library_music_rounded,
-                    title: 'Your Songs',
-                    subtitle: 'Open cloud song list',
-                    primaryText: primaryText,
-                    secondaryText: secondaryText,
-                    cardSurface: cardSurface,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SongsPage()),
+                  children: [
+                    _heroCard(
+                      profile: profile,
+                      primaryText: primaryText,
+                      secondaryText: secondaryText,
+                      cardSurface: cardSurface,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    _quickStats(
+                      profile: profile,
+                      primaryText: primaryText,
+                      secondaryText: secondaryText,
+                      cardSurface: cardSurface,
+                    ),
+                    const SizedBox(height: 12),
+                    _panel(
+                      title: 'About',
+                      primaryText: primaryText,
+                      secondaryText: secondaryText,
+                      cardSurface: cardSurface,
+                      children: [
+                        _line(
+                          'Bio',
+                          profile.bio.isEmpty ? 'Not set' : profile.bio,
+                          primaryText: primaryText,
+                          secondaryText: secondaryText,
+                        ),
+                        _line(
+                          'Favorite Genre',
+                          profile.favoriteGenre.isEmpty
+                              ? 'Not set'
+                              : profile.favoriteGenre,
+                          primaryText: primaryText,
+                          secondaryText: secondaryText,
+                        ),
+                        _line(
+                          'Favorite Artist',
+                          profile.favoriteArtist.isEmpty
+                              ? 'Not set'
+                              : profile.favoriteArtist,
+                          primaryText: primaryText,
+                          secondaryText: secondaryText,
+                        ),
+                        _line(
+                          'Location',
+                          profile.location.isEmpty
+                              ? 'Not set'
+                              : profile.location,
+                          primaryText: primaryText,
+                          secondaryText: secondaryText,
+                        ),
+                        _line(
+                          'Email',
+                          email,
+                          primaryText: primaryText,
+                          secondaryText: secondaryText,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _primaryAction(
+                            icon: Icons.edit_outlined,
+                            title: 'Edit Profile',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const EditProfilePage(),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _outlineAction(
+                            icon: Icons.settings_outlined,
+                            title: 'Settings',
+                            primaryText: primaryText,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const SettingsPage(),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _actionTile(
+                      icon: Icons.library_music_rounded,
+                      title: 'Your Songs',
+                      subtitle: 'Open cloud song list',
+                      primaryText: primaryText,
+                      secondaryText: secondaryText,
+                      cardSurface: cardSurface,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SongsPage()),
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           ),
