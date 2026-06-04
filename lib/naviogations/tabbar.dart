@@ -17,7 +17,7 @@ class Tabbars extends StatefulWidget {
 
 class _TabbarsState extends State<Tabbars>
     with RouteAware, SingleTickerProviderStateMixin {
-  static const Duration _sectionSwitchDuration = Duration(milliseconds: 850);
+  static const Duration _sectionSwitchDuration = Duration(milliseconds: 560);
   static const Curve _sectionSwitchCurve = Curves.easeInOutCubic;
 
   int _currentIndex = 0;
