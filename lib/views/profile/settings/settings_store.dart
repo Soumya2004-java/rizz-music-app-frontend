@@ -56,6 +56,7 @@ class AppConfigData {
         'Jazz',
         'Electronic',
         'Vocal',
+        'Bass Boost',
       ],
       dolbyAtmosOptions: ['Automatic', 'Always On', 'Off'],
       highResOptions: ['On', 'Off'],

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../../background/gradient_mesh_background.dart';
+import '../../../services/equalizer_service.dart';
 import '../../../pages/sign_in_or_sign_up_page.dart';
 import '../../../services/auth_store.dart';
 import '../../../widgets/app_skeletons.dart';
@@ -328,18 +329,17 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       Container(
                         key: _equalizerTileKey,
-                        child: _choiceTile(
-                          icon: Icons.equalizer_rounded,
-                          title: 'Equalizer Preset',
-                          value: _settings.equalizerPreset,
-                          options: _config.equalizerPresets,
+                        child: _switchTile(
+                          icon: Icons.tune_rounded,
+                          title: 'Enable Equalizer',
+                          value: _settings.equalizerEnabled,
                           onChanged: (v) => _update(
-                            _settings = UserSettingsData(
+                            UserSettingsData(
                               autoplay: _settings.autoplay,
                               wifiOnlyDownloads: _settings.wifiOnlyDownloads,
                               normalizeAudio: _settings.normalizeAudio,
                               crossfade: _settings.crossfade,
-                              equalizerEnabled: _settings.equalizerEnabled,
+                              equalizerEnabled: v,
                               pushNewReleases: _settings.pushNewReleases,
                               pushRecommendations:
                                   _settings.pushRecommendations,
@@ -353,10 +353,48 @@ class _SettingsPageState extends State<SettingsPage> {
                               trebleLevel: _settings.trebleLevel,
                               dolbyAtmos: _settings.dolbyAtmos,
                               highResMusic: _settings.highResMusic,
-                              equalizerPreset: v,
+                              equalizerPreset: _settings.equalizerPreset,
                               theme: _settings.theme,
                               language: _settings.language,
                               cacheLimit: _settings.cacheLimit,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Opacity(
+                        opacity: _settings.equalizerEnabled ? 1.0 : 0.5,
+                        child: IgnorePointer(
+                          ignoring: !_settings.equalizerEnabled,
+                          child: _choiceTile(
+                            icon: Icons.equalizer_rounded,
+                            title: 'Equalizer Preset',
+                            value: _settings.equalizerPreset,
+                            options: _config.equalizerPresets,
+                            onChanged: (v) => _update(
+                              _settings = UserSettingsData(
+                                autoplay: _settings.autoplay,
+                                wifiOnlyDownloads: _settings.wifiOnlyDownloads,
+                                normalizeAudio: _settings.normalizeAudio,
+                                crossfade: _settings.crossfade,
+                                equalizerEnabled: _settings.equalizerEnabled,
+                                pushNewReleases: _settings.pushNewReleases,
+                                pushRecommendations:
+                                    _settings.pushRecommendations,
+                                privateSession: _settings.privateSession,
+                                listeningActivityVisible:
+                                    _settings.listeningActivityVisible,
+                                biometricLock: _settings.biometricLock,
+                                crossfadeSeconds: _settings.crossfadeSeconds,
+                                bassLevel: _settings.bassLevel,
+                                midLevel: _settings.midLevel,
+                                trebleLevel: _settings.trebleLevel,
+                                dolbyAtmos: _settings.dolbyAtmos,
+                                highResMusic: _settings.highResMusic,
+                                equalizerPreset: v,
+                                theme: _settings.theme,
+                                language: _settings.language,
+                                cacheLimit: _settings.cacheLimit,
+                              ),
                             ),
                           ),
                         ),
@@ -449,8 +487,17 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _update(UserSettingsData data) {
+    final prevEnabled = _settings.equalizerEnabled;
+    final prevPreset = _settings.equalizerPreset;
     setState(() => _settings = data);
     _save();
+    if (data.equalizerEnabled != prevEnabled ||
+        data.equalizerPreset != prevPreset) {
+      EqualizerService.instance.apply(
+        enabled: data.equalizerEnabled,
+        preset: data.equalizerPreset,
+      );
+    }
   }
 
   Widget _buildGlassDialog({required Widget child}) {

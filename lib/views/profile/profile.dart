@@ -193,26 +193,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 74,
-            height: 74,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFF7B68), Color(0xFFFFAA5A)],
-              ),
-            ),
-            child: Center(
-              child: Text(
-                _avatarText(profile.name),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 28,
-                ),
-              ),
-            ),
-          ),
+          _avatar(profile),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -465,6 +446,50 @@ class _ProfilePageState extends State<ProfilePage> {
         title: Text(title, style: TextStyle(color: primaryText)),
         subtitle: Text(subtitle, style: TextStyle(color: secondaryText)),
         trailing: Icon(Icons.chevron_right_rounded, color: secondaryText),
+      ),
+    );
+  }
+
+  Widget _avatar(ProfileData profile) {
+    final hasPhoto = profile.photoUrl.isNotEmpty;
+    return Container(
+      width: 74,
+      height: 74,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: hasPhoto
+            ? null
+            : const LinearGradient(
+                colors: [Color(0xFFFF7B68), Color(0xFFFFAA5A)],
+              ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: hasPhoto
+          ? Image.network(
+              profile.photoUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _avatarInitials(profile.name),
+            )
+          : _avatarInitials(profile.name),
+    );
+  }
+
+  Widget _avatarInitials(String name) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFFF7B68), Color(0xFFFFAA5A)],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          _avatarText(name),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 28,
+          ),
+        ),
       ),
     );
   }

@@ -16,6 +16,8 @@
                 </array>
             </dict>
         </array>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Choose a photo for your profile picture.</string>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>

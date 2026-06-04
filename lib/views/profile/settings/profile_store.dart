@@ -14,6 +14,7 @@ class ProfileData {
     required this.favoriteGenre,
     required this.favoriteArtist,
     required this.location,
+    this.photoUrl = '',
   });
 
   final String name;
@@ -23,6 +24,7 @@ class ProfileData {
   final String favoriteGenre;
   final String favoriteArtist;
   final String location;
+  final String photoUrl;
 
   static const ProfileData empty = ProfileData(
     name: 'User',
@@ -32,6 +34,7 @@ class ProfileData {
     favoriteGenre: '',
     favoriteArtist: '',
     location: '',
+    photoUrl: '',
   );
 
   ProfileData copyWith({
@@ -42,6 +45,7 @@ class ProfileData {
     String? favoriteGenre,
     String? favoriteArtist,
     String? location,
+    String? photoUrl,
   }) {
     return ProfileData(
       name: name ?? this.name,
@@ -51,6 +55,7 @@ class ProfileData {
       favoriteGenre: favoriteGenre ?? this.favoriteGenre,
       favoriteArtist: favoriteArtist ?? this.favoriteArtist,
       location: location ?? this.location,
+      photoUrl: photoUrl ?? this.photoUrl,
     );
   }
 
@@ -63,6 +68,7 @@ class ProfileData {
       'favoriteGenre': favoriteGenre,
       'favoriteArtist': favoriteArtist,
       'location': location,
+      'photoUrl': photoUrl,
     };
   }
 
@@ -80,6 +86,7 @@ class ProfileData {
       favoriteGenre: read('favoriteGenre', ProfileData.empty.favoriteGenre),
       favoriteArtist: read('favoriteArtist', ProfileData.empty.favoriteArtist),
       location: read('location', ProfileData.empty.location),
+      photoUrl: map['photoUrl']?.toString().trim() ?? '',
     );
   }
 }
@@ -136,6 +143,7 @@ class ProfileStore {
           : 'user';
 
       profile.value = ProfileData.fromMap({
+        'photoUrl': user.photoURL ?? '',
         ...data,
         'name': (data['name'] ?? defaultName),
         'username': (data['username'] ?? defaultUsername),

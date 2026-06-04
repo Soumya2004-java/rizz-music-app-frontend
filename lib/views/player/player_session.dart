@@ -7,7 +7,9 @@ import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
+import '../../services/equalizer_service.dart';
 import '../../songs/songs.dart';
+import '../profile/settings/settings_store.dart';
 
 class LyricLine {
   final Duration at;
@@ -24,6 +26,7 @@ class PlayerSession {
   PlayerSession._() {
     _audioPlayer.setVolume(_volume);
     _initDeviceMonitoring();
+    _initEqualizerFromSavedSettings();
     _positionSub = _audioPlayer.positionStream.listen((position) {
       if (_isSimulatedPlayback) return;
       _position = position;
@@ -53,7 +56,12 @@ class PlayerSession {
 
   static final PlayerSession instance = PlayerSession._();
 
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final AudioPlayer _audioPlayer = AudioPlayer(
+    audioPipeline: AudioPipeline(
+      androidAudioEffects: EqualizerService.instance.androidEffects,
+      darwinAudioEffects: EqualizerService.instance.darwinEffects,
+    ),
+  );
   final StreamController<PlayerSnapshot> _controller =
       StreamController<PlayerSnapshot>.broadcast();
 
@@ -261,11 +269,9 @@ class PlayerSession {
       _emit();
     } catch (_) {
       if (actionToken != _trackActionToken) return;
-      // Fallback to simulated progress if source cannot load.
-      _isPlaying = autoPlay;
-      if (_isPlaying) {
-        _startTicker();
-      }
+      // Keep player stable on source errors; avoid instant skip loops.
+      _stopTicker();
+      _isPlaying = false;
       _emit();
     } finally {
       if (actionToken == _trackActionToken) {
@@ -359,6 +365,16 @@ class PlayerSession {
     _volume = next;
     _audioPlayer.setVolume(_volume);
     _emit();
+  }
+
+  Future<void> _initEqualizerFromSavedSettings() async {
+    try {
+      final s = await SettingsStore.fetchUserSettings();
+      await EqualizerService.instance.apply(
+        enabled: s.equalizerEnabled,
+        preset: s.equalizerPreset,
+      );
+    } catch (_) {}
   }
 
   Future<void> _initDeviceMonitoring() async {
