@@ -1,26 +1,15 @@
 import 'package:flutter/material.dart';
 
-class AppSkeletonBox extends StatefulWidget {
-  const AppSkeletonBox({
-    super.key,
-    this.height = 16,
-    this.width,
-    this.radius = 12,
-    this.margin,
-    this.child,
-  });
+class AppSkeletonScope extends StatefulWidget {
+  const AppSkeletonScope({super.key, required this.child});
 
-  final double height;
-  final double? width;
-  final double radius;
-  final EdgeInsetsGeometry? margin;
-  final Widget? child;
+  final Widget child;
 
   @override
-  State<AppSkeletonBox> createState() => _AppSkeletonBoxState();
+  State<AppSkeletonScope> createState() => _AppSkeletonScopeState();
 }
 
-class _AppSkeletonBoxState extends State<AppSkeletonBox>
+class _AppSkeletonScopeState extends State<AppSkeletonScope>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
@@ -41,35 +30,79 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
 
   @override
   Widget build(BuildContext context) {
+    return _AppSkeletonTicker(
+      animation: _controller,
+      child: RepaintBoundary(child: widget.child),
+    );
+  }
+}
+
+class _AppSkeletonTicker extends InheritedWidget {
+  const _AppSkeletonTicker({required this.animation, required super.child});
+
+  final Animation<double> animation;
+
+  static Animation<double> maybeOf(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<_AppSkeletonTicker>()
+            ?.animation ??
+        const AlwaysStoppedAnimation<double>(0.5);
+  }
+
+  @override
+  bool updateShouldNotify(_AppSkeletonTicker oldWidget) {
+    return animation != oldWidget.animation;
+  }
+}
+
+class AppSkeletonBox extends StatelessWidget {
+  const AppSkeletonBox({
+    super.key,
+    this.height = 16,
+    this.width,
+    this.radius = 12,
+    this.margin,
+    this.child,
+  });
+
+  final double height;
+  final double? width;
+  final double radius;
+  final EdgeInsetsGeometry? margin;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = _AppSkeletonTicker.maybeOf(context);
     final scheme = Theme.of(context).colorScheme;
     final base = scheme.surfaceContainerHighest.withValues(alpha: 0.55);
     final glow = scheme.surfaceContainerHighest.withValues(alpha: 0.92);
 
     return AnimatedBuilder(
-      animation: _controller,
+      animation: animation,
       builder: (context, _) {
-        final t = Curves.easeInOut.transform(_controller.value);
+        final t = Curves.easeInOut.transform(animation.value);
         final dy = -2.5 + (t * 5.0);
         return Container(
-          margin: widget.margin,
+          margin: margin,
           child: Transform.translate(
             offset: Offset(0, dy),
             child: Container(
-              width: widget.width,
-              height: widget.height,
+              width: width,
+              height: height,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(widget.radius),
+                borderRadius: BorderRadius.circular(radius),
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
                     base,
-                    Color.lerp(base, glow, _controller.value)!,
+                    Color.lerp(base, glow, animation.value)!,
                     base,
                   ],
                 ),
               ),
-              child: widget.child,
+              child: child,
             ),
           ),
         );
@@ -83,56 +116,66 @@ class AppPageSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-      children: const [
-        AppSkeletonBox(height: 34, width: 140, radius: 10),
-        SizedBox(height: 10),
-        AppSkeletonBox(height: 14, width: 220, radius: 8),
-        SizedBox(height: 18),
-        AppSkeletonBox(height: 180, radius: 22),
-        SizedBox(height: 16),
-        AppSkeletonBox(height: 18, width: 120, radius: 8),
-        SizedBox(height: 12),
-        AppSkeletonBox(height: 74, radius: 18),
-        SizedBox(height: 10),
-        AppSkeletonBox(height: 74, radius: 18),
-        SizedBox(height: 10),
-        AppSkeletonBox(height: 74, radius: 18),
-      ],
+    return AppSkeletonScope(
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+        children: const [
+          AppSkeletonBox(height: 34, width: 140, radius: 10),
+          SizedBox(height: 10),
+          AppSkeletonBox(height: 14, width: 220, radius: 8),
+          SizedBox(height: 18),
+          AppSkeletonBox(height: 180, radius: 22),
+          SizedBox(height: 16),
+          AppSkeletonBox(height: 18, width: 120, radius: 8),
+          SizedBox(height: 12),
+          AppSkeletonBox(height: 74, radius: 18),
+          SizedBox(height: 10),
+          AppSkeletonBox(height: 74, radius: 18),
+          SizedBox(height: 10),
+          AppSkeletonBox(height: 74, radius: 18),
+        ],
+      ),
     );
   }
 }
 
 class HomePageSkeleton extends StatelessWidget {
-  const HomePageSkeleton({super.key});
+  const HomePageSkeleton({super.key, this.showHeader = true});
+
+  final bool showHeader;
 
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
-    return ListView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(18, top + 20, 18, 24),
-      children: const [
-        AppSkeletonBox(height: 34, width: 220, radius: 10),
-        SizedBox(height: 8),
-        AppSkeletonBox(height: 14, width: 190, radius: 8),
-        SizedBox(height: 16),
-        _FeaturedAlbumSkeleton(),
-        SizedBox(height: 18),
-        AppSkeletonBox(height: 22, width: 170, radius: 8),
-        SizedBox(height: 8),
-        AppSkeletonBox(height: 12, width: 220, radius: 8),
-        SizedBox(height: 12),
-        _HorizontalAlbumRowSkeleton(),
-        SizedBox(height: 14),
-        AppSkeletonBox(height: 22, width: 180, radius: 8),
-        SizedBox(height: 8),
-        AppSkeletonBox(height: 12, width: 230, radius: 8),
-        SizedBox(height: 12),
-        _HorizontalAlbumRowSkeleton(),
-      ],
+    final headerSkeletons = <Widget>[
+      const AppSkeletonBox(height: 34, width: 220, radius: 10),
+      const SizedBox(height: 8),
+      const AppSkeletonBox(height: 14, width: 190, radius: 8),
+      const SizedBox(height: 16),
+    ];
+
+    return AppSkeletonScope(
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(18, showHeader ? top + 20 : 0, 18, 24),
+        children: [
+          if (showHeader) ...headerSkeletons,
+          const _FeaturedAlbumSkeleton(),
+          const SizedBox(height: 18),
+          const AppSkeletonBox(height: 22, width: 170, radius: 8),
+          const SizedBox(height: 8),
+          const AppSkeletonBox(height: 12, width: 220, radius: 8),
+          const SizedBox(height: 12),
+          const _HorizontalAlbumRowSkeleton(),
+          const SizedBox(height: 14),
+          const AppSkeletonBox(height: 22, width: 180, radius: 8),
+          const SizedBox(height: 8),
+          const AppSkeletonBox(height: 12, width: 230, radius: 8),
+          const SizedBox(height: 12),
+          const _HorizontalAlbumRowSkeleton(),
+        ],
+      ),
     );
   }
 }
@@ -142,28 +185,30 @@ class GridPageSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-      children: const [
-        AppSkeletonBox(height: 42, radius: 12, width: 120),
-        SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _AlbumGridCardSkeleton()),
-            SizedBox(width: 12),
-            Expanded(child: _AlbumGridCardSkeleton()),
-          ],
-        ),
-        SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _AlbumGridCardSkeleton()),
-            SizedBox(width: 12),
-            Expanded(child: _AlbumGridCardSkeleton()),
-          ],
-        ),
-      ],
+    return AppSkeletonScope(
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+        children: const [
+          AppSkeletonBox(height: 42, radius: 12, width: 120),
+          SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _AlbumGridCardSkeleton()),
+              SizedBox(width: 12),
+              Expanded(child: _AlbumGridCardSkeleton()),
+            ],
+          ),
+          SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _AlbumGridCardSkeleton()),
+              SizedBox(width: 12),
+              Expanded(child: _AlbumGridCardSkeleton()),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -268,22 +313,24 @@ class ListPageSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-      children: const [
-        AppSkeletonBox(height: 42, radius: 12),
-        SizedBox(height: 12),
-        AppSkeletonBox(height: 74, radius: 14),
-        SizedBox(height: 10),
-        AppSkeletonBox(height: 74, radius: 14),
-        SizedBox(height: 10),
-        AppSkeletonBox(height: 74, radius: 14),
-        SizedBox(height: 10),
-        AppSkeletonBox(height: 74, radius: 14),
-        SizedBox(height: 10),
-        AppSkeletonBox(height: 74, radius: 14),
-      ],
+    return AppSkeletonScope(
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+        children: const [
+          AppSkeletonBox(height: 42, radius: 12),
+          SizedBox(height: 12),
+          AppSkeletonBox(height: 74, radius: 14),
+          SizedBox(height: 10),
+          AppSkeletonBox(height: 74, radius: 14),
+          SizedBox(height: 10),
+          AppSkeletonBox(height: 74, radius: 14),
+          SizedBox(height: 10),
+          AppSkeletonBox(height: 74, radius: 14),
+          SizedBox(height: 10),
+          AppSkeletonBox(height: 74, radius: 14),
+        ],
+      ),
     );
   }
 }
@@ -294,28 +341,30 @@ class SearchPageSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
-    return ListView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(16, top + 12, 16, 24),
-      children: const [
-        AppSkeletonBox(height: 28, width: 160, radius: 10),
-        SizedBox(height: 12),
-        AppSkeletonBox(height: 52, radius: 16),
-        SizedBox(height: 12),
-        AppSkeletonBox(height: 34, radius: 999),
-        SizedBox(height: 18),
-        AppSkeletonBox(height: 20, width: 170, radius: 8),
-        SizedBox(height: 10),
-        AppSkeletonBox(height: 112, radius: 16),
-        SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(child: AppSkeletonBox(height: 116, radius: 16)),
-            SizedBox(width: 12),
-            Expanded(child: AppSkeletonBox(height: 116, radius: 16)),
-          ],
-        ),
-      ],
+    return AppSkeletonScope(
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(16, top + 12, 16, 24),
+        children: const [
+          AppSkeletonBox(height: 28, width: 160, radius: 10),
+          SizedBox(height: 12),
+          AppSkeletonBox(height: 52, radius: 16),
+          SizedBox(height: 12),
+          AppSkeletonBox(height: 34, radius: 999),
+          SizedBox(height: 18),
+          AppSkeletonBox(height: 20, width: 170, radius: 8),
+          SizedBox(height: 10),
+          AppSkeletonBox(height: 112, radius: 16),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: AppSkeletonBox(height: 116, radius: 16)),
+              SizedBox(width: 12),
+              Expanded(child: AppSkeletonBox(height: 116, radius: 16)),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -326,20 +375,22 @@ class FormPageSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
-    return ListView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(16, top + 10, 16, 24),
-      children: const [
-        AppSkeletonBox(height: 42, radius: 12),
-        SizedBox(height: 14),
-        AppSkeletonBox(height: 52, radius: 12),
-        SizedBox(height: 10),
-        AppSkeletonBox(height: 52, radius: 12),
-        SizedBox(height: 10),
-        AppSkeletonBox(height: 140, radius: 12),
-        SizedBox(height: 12),
-        AppSkeletonBox(height: 48, radius: 12),
-      ],
+    return AppSkeletonScope(
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(16, top + 10, 16, 24),
+        children: const [
+          AppSkeletonBox(height: 42, radius: 12),
+          SizedBox(height: 14),
+          AppSkeletonBox(height: 52, radius: 12),
+          SizedBox(height: 10),
+          AppSkeletonBox(height: 52, radius: 12),
+          SizedBox(height: 10),
+          AppSkeletonBox(height: 140, radius: 12),
+          SizedBox(height: 12),
+          AppSkeletonBox(height: 48, radius: 12),
+        ],
+      ),
     );
   }
 }

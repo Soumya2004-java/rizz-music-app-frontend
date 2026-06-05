@@ -287,9 +287,11 @@ class _LibraryPageState extends State<LibraryPage> {
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
-                              return const SizedBox(
-                                height: 86,
-                                child: AppSkeletonBox(height: 86, radius: 14),
+                              return const AppSkeletonScope(
+                                child: SizedBox(
+                                  height: 86,
+                                  child: AppSkeletonBox(height: 86, radius: 14),
+                                ),
                               );
                             }
 
