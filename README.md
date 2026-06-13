@@ -12,6 +12,8 @@ Per document:
 - `artist` (string)
 - `album` (string)
 - `audioPath` (string, pattern `music/{artist-slug}/{song-slug}.mp3`) or `audioUrl`
+- `highResAudioPath`/`highResAudioUrl` (optional lossless or high-resolution variant)
+- `dolbyAtmosAudioPath`/`dolbyAtmosAudioUrl` (optional Dolby Atmos or spatial-audio variant)
 - `imagePath` (string, pattern `covers/{artist-slug}/{song-slug}.jpg`) or `imageUrl`
 - `durationSeconds` (number, optional)
 

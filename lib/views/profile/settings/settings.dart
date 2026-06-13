@@ -7,8 +7,10 @@ import '../../../services/equalizer_service.dart';
 import '../../../pages/sign_in_or_sign_up_page.dart';
 import '../../../services/auth_store.dart';
 import '../../../widgets/app_skeletons.dart';
+import '../../player/player_session.dart';
 import 'change_password_page.dart';
 import 'edit profile /edit_profile.dart';
+import 'equalizer_page.dart';
 import 'help_center_page.dart';
 import 'profile_store.dart';
 import 'report_problem_page.dart';
@@ -51,7 +53,10 @@ class _SettingsPageState extends State<SettingsPage> {
       _loading = false;
     });
     if (widget.focusEqualizer) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEqualizer());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _scrollToEqualizer();
+      });
     }
   }
 
@@ -329,74 +334,20 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       Container(
                         key: _equalizerTileKey,
-                        child: _switchTile(
-                          icon: Icons.tune_rounded,
-                          title: 'Enable Equalizer',
-                          value: _settings.equalizerEnabled,
-                          onChanged: (v) => _update(
-                            UserSettingsData(
-                              autoplay: _settings.autoplay,
-                              wifiOnlyDownloads: _settings.wifiOnlyDownloads,
-                              normalizeAudio: _settings.normalizeAudio,
-                              crossfade: _settings.crossfade,
-                              equalizerEnabled: v,
-                              pushNewReleases: _settings.pushNewReleases,
-                              pushRecommendations:
-                                  _settings.pushRecommendations,
-                              privateSession: _settings.privateSession,
-                              listeningActivityVisible:
-                                  _settings.listeningActivityVisible,
-                              biometricLock: _settings.biometricLock,
-                              crossfadeSeconds: _settings.crossfadeSeconds,
-                              bassLevel: _settings.bassLevel,
-                              midLevel: _settings.midLevel,
-                              trebleLevel: _settings.trebleLevel,
-                              dolbyAtmos: _settings.dolbyAtmos,
-                              highResMusic: _settings.highResMusic,
-                              equalizerPreset: _settings.equalizerPreset,
-                              theme: _settings.theme,
-                              language: _settings.language,
-                              cacheLimit: _settings.cacheLimit,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Opacity(
-                        opacity: _settings.equalizerEnabled ? 1.0 : 0.5,
-                        child: IgnorePointer(
-                          ignoring: !_settings.equalizerEnabled,
-                          child: _choiceTile(
-                            icon: Icons.equalizer_rounded,
-                            title: 'Equalizer Preset',
-                            value: _settings.equalizerPreset,
-                            options: _config.equalizerPresets,
-                            onChanged: (v) => _update(
-                              _settings = UserSettingsData(
-                                autoplay: _settings.autoplay,
-                                wifiOnlyDownloads: _settings.wifiOnlyDownloads,
-                                normalizeAudio: _settings.normalizeAudio,
-                                crossfade: _settings.crossfade,
-                                equalizerEnabled: _settings.equalizerEnabled,
-                                pushNewReleases: _settings.pushNewReleases,
-                                pushRecommendations:
-                                    _settings.pushRecommendations,
-                                privateSession: _settings.privateSession,
-                                listeningActivityVisible:
-                                    _settings.listeningActivityVisible,
-                                biometricLock: _settings.biometricLock,
-                                crossfadeSeconds: _settings.crossfadeSeconds,
-                                bassLevel: _settings.bassLevel,
-                                midLevel: _settings.midLevel,
-                                trebleLevel: _settings.trebleLevel,
-                                dolbyAtmos: _settings.dolbyAtmos,
-                                highResMusic: _settings.highResMusic,
-                                equalizerPreset: v,
-                                theme: _settings.theme,
-                                language: _settings.language,
-                                cacheLimit: _settings.cacheLimit,
+                        child: _navTile(
+                          icon: Icons.equalizer_rounded,
+                          title: 'Equalizer',
+                          subtitle:
+                              '${_settings.equalizerEnabled ? 'On' : 'Off'} · ${_settings.equalizerPreset}',
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const EqualizerPage(),
                               ),
-                            ),
-                          ),
+                            );
+                            if (!mounted) return;
+                            _load();
+                          },
                         ),
                       ),
                       _choiceTile(
@@ -487,17 +438,14 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _update(UserSettingsData data) {
-    final prevEnabled = _settings.equalizerEnabled;
-    final prevPreset = _settings.equalizerPreset;
     setState(() => _settings = data);
     _save();
-    if (data.equalizerEnabled != prevEnabled ||
-        data.equalizerPreset != prevPreset) {
-      EqualizerService.instance.apply(
-        enabled: data.equalizerEnabled,
-        preset: data.equalizerPreset,
-      );
-    }
+    EqualizerService.instance.apply(
+      enabled: data.equalizerEnabled,
+      preset: data.equalizerPreset,
+      bandGains: data.equalizerBands,
+    );
+    PlayerSession.instance.applyAudioSettings(data);
   }
 
   Widget _buildGlassDialog({required Widget child}) {

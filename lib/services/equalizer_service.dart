@@ -4,21 +4,32 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
-/// 5-band gain presets in dB at center frequencies
-/// 60 Hz / 230 Hz / 910 Hz / 3.6 kHz / 14 kHz.
+const List<String> equalizerBandLabels = [
+  '32',
+  '64',
+  '125',
+  '250',
+  '500',
+  '1K',
+  '4K',
+  '16K',
+];
+
+/// 8-band gain presets in dB mapped across
+/// 32 Hz / 64 Hz / 125 Hz / 250 Hz / 500 Hz / 1 kHz / 4 kHz / 16 kHz.
 const Map<String, List<double>> _presetGains = {
-  'Flat': [0, 0, 0, 0, 0],
-  'Pop': [-1, 2, 4, 2, -1],
-  'Rock': [4, 2, -1, 2, 4],
-  'Hip-Hop': [5, 3, 0, 1, 2],
-  'Classical': [3, 2, -1, 2, 3],
-  'Jazz': [2, 1, 1, 2, 3],
-  'Electronic': [4, 1, 0, 2, 4],
-  'Vocal': [-2, -1, 3, 3, 0],
-  'Bass Boost': [6, 4, 1, 0, 0],
+  'Flat': [0, 0, 0, 0, 0, 0, 0, 0],
+  'Pop': [-1, 1, 2, 3, 2, 1, 2, -1],
+  'Rock': [4, 3, 2, 0, -1, 1, 3, 4],
+  'Hip-Hop': [6, 5, 3, 1, 0, 1, 2, 2],
+  'Classical': [2, 2, 1, 0, -1, 1, 3, 4],
+  'Jazz': [3, 2, 1, 1, 0, 2, 3, 3],
+  'Electronic': [5, 4, 2, 0, 0, 2, 4, 5],
+  'Vocal': [-2, -1, 0, 2, 4, 4, 2, 0],
+  'Bass Boost': [7, 6, 4, 2, 0, 0, 0, -1],
 };
 
-const List<double> _flatGains = [0, 0, 0, 0, 0];
+const List<double> _flatGains = [0, 0, 0, 0, 0, 0, 0, 0];
 
 class EqualizerService {
   EqualizerService._() {
@@ -30,6 +41,7 @@ class EqualizerService {
   static final EqualizerService instance = EqualizerService._();
 
   AndroidEqualizer? _android;
+  Future<void> _applyQueue = Future<void>.value();
 
   String _currentPreset = 'Flat';
   bool _currentEnabled = false;
@@ -45,14 +57,33 @@ class EqualizerService {
 
   static List<String> get availablePresets => _presetGains.keys.toList();
 
-  Future<void> apply({required bool enabled, required String preset}) async {
+  static List<double> presetGainsFor(String preset) {
+    return List<double>.from(_presetGains[preset] ?? _flatGains);
+  }
+
+  Future<void> apply({
+    required bool enabled,
+    required String preset,
+    List<double>? bandGains,
+  }) async {
     _currentPreset = preset;
     _currentEnabled = enabled;
-    try {
-      await _android?.setEnabled(enabled);
-    } catch (_) {}
-    final gains = enabled ? (_presetGains[preset] ?? _flatGains) : _flatGains;
-    await _applyGains(gains);
+    final gains = enabled
+        ? (bandGains?.length == 8 ? bandGains! : presetGainsFor(preset))
+        : _flatGains;
+    _applyQueue = _applyQueue
+        .then((_) async {
+          final eq = _android;
+          if (eq == null) return;
+          try {
+            await eq.setEnabled(enabled);
+            await _applyGains(gains);
+          } catch (_) {
+            // Native EQ may be unavailable on some devices; swallow.
+          }
+        })
+        .catchError((_) {});
+    await _applyQueue;
   }
 
   Future<void> _applyGains(List<double> gains) async {

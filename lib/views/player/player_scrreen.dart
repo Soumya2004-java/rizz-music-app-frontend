@@ -9,7 +9,7 @@ import 'package:lottie/lottie.dart';
 import '../../services/song_download_service.dart';
 import '../../songs/albums/album_page.dart';
 import '../../songs/songs.dart';
-import '../profile/settings/settings.dart';
+import '../profile/settings/equalizer_page.dart';
 import '../../widgets/glass_popup.dart';
 import '../../widgets/auto_marquee_text.dart';
 import 'player_session.dart';
@@ -255,9 +255,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 onTap: () {
                   Navigator.pop(sheetContext);
                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const SettingsPage(focusEqualizer: true),
-                    ),
+                    MaterialPageRoute(builder: (_) => const EqualizerPage()),
                   );
                 },
               ),
@@ -711,6 +709,31 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
+  Widget _audioModeBadge({
+    required IconData icon,
+    String? label,
+    bool iconOnly = false,
+    double textSize = 10,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: Colors.white.withValues(alpha: 0.9)),
+        if (!iconOnly) ...[
+          const SizedBox(width: 5),
+          Text(
+            label ?? '',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.92),
+              fontSize: textSize,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   String _fmt(Duration d) {
     String two(int n) => n.toString().padLeft(2, '0');
     return '${two(d.inMinutes.remainder(60))}:${two(d.inSeconds.remainder(60))}';
@@ -983,6 +1006,16 @@ class _PlayerScreenState extends State<PlayerScreen>
     final isShuffleOn = _session.isShuffleEnabled;
     final repeatMode = _session.repeatMode;
     final isLight = Theme.of(context).brightness == Brightness.light;
+    final audioBadges = <Widget>[
+      if (_session.isDolbyAtmosEnabled)
+        _audioModeBadge(icon: Icons.spatial_audio_rounded, iconOnly: true),
+      if (_session.isHighResEnabled)
+        _audioModeBadge(
+          label: 'High-Res',
+          icon: Icons.high_quality_rounded,
+          textSize: 9,
+        ),
+    ];
     final hasActiveSong = song != null;
     final canGoNext = hasActiveSong;
     final canGoPrevious = hasActiveSong;
@@ -1043,10 +1076,11 @@ class _PlayerScreenState extends State<PlayerScreen>
             SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
+                  final compact = constraints.maxHeight < 760;
                   final sidePadding = constraints.maxWidth < 380 ? 16.0 : 24.0;
                   final artSize = math.min(
                     constraints.maxWidth - (sidePadding * 2),
-                    360.0,
+                    compact ? 320.0 : 360.0,
                   );
                   final discSize = artSize * 0.84;
                   final devicesCardWidth = math.min(
@@ -1059,7 +1093,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       sidePadding,
                       8,
                       sidePadding,
-                      16,
+                      12,
                     ),
                     child: Column(
                       children: [
@@ -1067,6 +1101,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             IconButton(
+                              visualDensity: VisualDensity.compact,
+                              constraints: const BoxConstraints(
+                                minWidth: 44,
+                                minHeight: 44,
+                              ),
+                              padding: const EdgeInsets.all(10),
                               onPressed: _minimizePlayer,
                               icon: const Icon(
                                 Icons.keyboard_arrow_down_rounded,
@@ -1097,6 +1137,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                               ],
                             ),
                             IconButton(
+                              visualDensity: VisualDensity.compact,
                               onPressed: _openMoreActionsSheet,
                               style: IconButton.styleFrom(
                                 padding: const EdgeInsets.all(10),
@@ -1110,332 +1151,399 @@ class _PlayerScreenState extends State<PlayerScreen>
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        _buildRetroTurntable(artwork, discSize),
-                        const SizedBox(height: 22),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
+                        SizedBox(height: compact ? 4 : 6),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Flexible(
+                                flex: 5,
+                                child: Center(
+                                  child: _buildRetroTurntable(
+                                    artwork,
+                                    discSize,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(height: compact ? 4 : 8),
+                              Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    title,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w700,
-                                      height: 1.2,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          title,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: compact ? 18 : 20,
+                                            fontWeight: FontWeight.w700,
+                                            height: 1.1,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        AutoMarqueeText(
+                                          artist,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: compact ? 12 : 13,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  AutoMarqueeText(
-                                    artist,
+                                  const SizedBox(width: 10),
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: _session.toggleLikeCurrentSong,
+                                    icon: Icon(
+                                      isLiked
+                                          ? Icons.favorite_rounded
+                                          : Icons.favorite_border_rounded,
+                                      color: isLiked
+                                          ? const Color(0xFFFF5A7A)
+                                          : (isLight
+                                                ? Colors.black.withValues(
+                                                    alpha: 0.85,
+                                                  )
+                                                : Colors.white.withValues(
+                                                    alpha: 0.9,
+                                                  )),
+                                      size: 28,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (audioBadges.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Center(
+                                  child: Wrap(
+                                    alignment: WrapAlignment.center,
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: audioBadges,
+                                  ),
+                                ),
+                              ],
+                              SizedBox(height: compact ? 6 : 8),
+                              SliderTheme(
+                                data: SliderTheme.of(context).copyWith(
+                                  thumbShape: const RoundSliderThumbShape(
+                                    enabledThumbRadius: 6,
+                                  ),
+                                  overlayShape: const RoundSliderOverlayShape(
+                                    overlayRadius: 12,
+                                  ),
+                                  trackHeight: 3,
+                                  inactiveTrackColor: isLight
+                                      ? Colors.grey.withValues(alpha: 0.45)
+                                      : Colors.white.withValues(alpha: 0.32),
+                                  activeTrackColor: isLight
+                                      ? Colors.black
+                                      : Colors.white,
+                                  thumbColor: isLight
+                                      ? Colors.black
+                                      : Colors.white,
+                                ),
+                                child: Slider(
+                                  value: sliderValue,
+                                  max: sliderMax,
+                                  onChanged: hasDuration
+                                      ? (value) {
+                                          setState(() {
+                                            _pendingSeekMs = value;
+                                          });
+                                        }
+                                      : null,
+                                  onChangeEnd: hasDuration
+                                      ? (value) {
+                                          _session.seek(
+                                            Duration(
+                                              milliseconds: value.round(),
+                                            ),
+                                          );
+                                          if (!mounted) return;
+                                          setState(() {
+                                            _pendingSeekMs = null;
+                                          });
+                                        }
+                                      : null,
+                                ),
+                              ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _fmt(position),
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 15,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    _fmt(duration),
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            IconButton(
-                              onPressed: _session.toggleLikeCurrentSong,
-                              icon: Icon(
-                                isLiked
-                                    ? Icons.favorite_rounded
-                                    : Icons.favorite_border_rounded,
-                                color: isLiked
-                                    ? const Color(0xFFFF5A7A)
-                                    : (isLight
-                                          ? Colors.black.withValues(alpha: 0.85)
-                                          : Colors.white.withValues(
-                                              alpha: 0.9,
-                                            )),
-                                size: 28,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            thumbShape: const RoundSliderThumbShape(
-                              enabledThumbRadius: 6,
-                            ),
-                            overlayShape: const RoundSliderOverlayShape(
-                              overlayRadius: 12,
-                            ),
-                            trackHeight: 3,
-                            inactiveTrackColor: isLight
-                                ? Colors.grey.withValues(alpha: 0.45)
-                                : Colors.white.withValues(alpha: 0.32),
-                            activeTrackColor: isLight
-                                ? Colors.black
-                                : Colors.white,
-                            thumbColor: isLight ? Colors.black : Colors.white,
-                          ),
-                          child: Slider(
-                            value: sliderValue,
-                            max: sliderMax,
-                            onChanged: hasDuration
-                                ? (value) {
-                                    setState(() {
-                                      _pendingSeekMs = value;
-                                    });
-                                  }
-                                : null,
-                            onChangeEnd: hasDuration
-                                ? (value) {
-                                    _session.seek(
-                                      Duration(milliseconds: value.round()),
-                                    );
-                                    if (!mounted) return;
-                                    setState(() {
-                                      _pendingSeekMs = null;
-                                    });
-                                  }
-                                : null,
-                          ),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              _fmt(position),
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              _fmt(duration),
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            OutlinedButton.icon(
-                              onPressed: _openUpNextSheet,
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.5),
-                                ),
-                                foregroundColor: isLight
-                                    ? Colors.black
-                                    : Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
-                                ),
-                              ),
-                              icon: const Icon(
-                                Icons.queue_music_rounded,
-                                size: 18,
-                              ),
-                              label: const Text('Up Next'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            IconButton(
-                              onPressed: _session.toggleShuffle,
-                              icon: Icon(
-                                Icons.shuffle_rounded,
-                                color: isShuffleOn
-                                    ? const Color(0xFF39D98A)
-                                    : (isLight ? Colors.black : Colors.white),
-                                size: 26,
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: canGoPrevious ? _handlePrevious : null,
-                              icon: Icon(
-                                Icons.skip_previous_rounded,
-                                color: canGoPrevious
-                                    ? (isLight ? Colors.black : Colors.white)
-                                    : (isLight
-                                          ? Colors.black.withValues(alpha: 0.35)
-                                          : Colors.white.withValues(
-                                              alpha: 0.35,
-                                            )),
-                                size: 36,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: _handlePlayPause,
-                              child: Container(
-                                height: 84,
-                                width: 84,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.black,
-                                ),
-                                child: Icon(
-                                  _session.isPlaying
-                                      ? Icons.pause_rounded
-                                      : Icons.play_arrow_rounded,
-                                  color: Colors.white,
-                                  size: 52,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: canGoNext ? _handleNext : null,
-                              icon: Icon(
-                                Icons.skip_next_rounded,
-                                color: canGoNext
-                                    ? (isLight ? Colors.black : Colors.white)
-                                    : (isLight
-                                          ? Colors.black.withValues(alpha: 0.35)
-                                          : Colors.white.withValues(
-                                              alpha: 0.35,
-                                            )),
-                                size: 36,
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: _session.cycleRepeatMode,
-                              icon: Icon(
-                                _repeatIcon(repeatMode),
-                                color: repeatMode == RepeatMode.off
-                                    ? (isLight ? Colors.black : Colors.white)
-                                    : const Color(0xFF39D98A),
-                                size: 26,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            OutlinedButton(
-                              onPressed: _isDownloading
-                                  ? null
-                                  : _downloadCurrentSong,
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.5),
-                                ),
-                                foregroundColor: isLight
-                                    ? Colors.black
-                                    : Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                                padding: const EdgeInsets.all(12),
-                                minimumSize: const Size(46, 46),
-                              ),
-                              child: _isDownloading
-                                  ? SizedBox(
-                                      height: 18,
-                                      width: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: isLight
-                                            ? Colors.black
-                                            : Colors.white,
+                              SizedBox(height: compact ? 6 : 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: _openUpNextSheet,
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.5,
+                                        ),
                                       ),
-                                    )
-                                  : Icon(
-                                      Icons.download_rounded,
-                                      size: 20,
-                                      color: isLight
+                                      foregroundColor: isLight
                                           ? Colors.black
                                           : Colors.white,
-                                    ),
-                            ),
-                            const SizedBox(width: 10),
-                            SizedBox(
-                              width: devicesCardWidth,
-                              child: OutlinedButton.icon(
-                                onPressed: _openDevicesSheet,
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(
-                                    color: Colors.white.withValues(alpha: 0.5),
-                                  ),
-                                  foregroundColor: isLight
-                                      ? Colors.black
-                                      : Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 10,
-                                  ),
-                                ),
-                                icon: const Icon(
-                                  Icons.speaker_group_rounded,
-                                  size: 18,
-                                ),
-                                label: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${_session.connectedOutputCount} device${_session.connectedOutputCount == 1 ? '' : 's'} connected',
-                                    ),
-                                    Text(
-                                      _session.availableDevices.join(' • '),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 10,
                                       ),
                                     ),
-                                  ],
-                                ),
+                                    icon: const Icon(
+                                      Icons.queue_music_rounded,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Up Next'),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            OutlinedButton(
-                              onPressed: _openVolumeSheet,
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.5),
-                                ),
-                                foregroundColor: isLight
-                                    ? Colors.black
-                                    : Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                                padding: const EdgeInsets.all(12),
-                                minimumSize: const Size(46, 46),
+                              SizedBox(height: compact ? 6 : 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: _session.toggleShuffle,
+                                    icon: Icon(
+                                      Icons.shuffle_rounded,
+                                      color: isShuffleOn
+                                          ? const Color(0xFF39D98A)
+                                          : (isLight
+                                                ? Colors.black
+                                                : Colors.white),
+                                      size: 26,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: canGoPrevious
+                                        ? _handlePrevious
+                                        : null,
+                                    icon: Icon(
+                                      Icons.skip_previous_rounded,
+                                      color: canGoPrevious
+                                          ? (isLight
+                                                ? Colors.black
+                                                : Colors.white)
+                                          : (isLight
+                                                ? Colors.black.withValues(
+                                                    alpha: 0.35,
+                                                  )
+                                                : Colors.white.withValues(
+                                                    alpha: 0.35,
+                                                  )),
+                                      size: 36,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: _handlePlayPause,
+                                    child: Container(
+                                      height: compact ? 76 : 84,
+                                      width: compact ? 76 : 84,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.black,
+                                      ),
+                                      child: Icon(
+                                        _session.isPlaying
+                                            ? Icons.pause_rounded
+                                            : Icons.play_arrow_rounded,
+                                        color: Colors.white,
+                                        size: compact ? 48 : 52,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: canGoNext ? _handleNext : null,
+                                    icon: Icon(
+                                      Icons.skip_next_rounded,
+                                      color: canGoNext
+                                          ? (isLight
+                                                ? Colors.black
+                                                : Colors.white)
+                                          : (isLight
+                                                ? Colors.black.withValues(
+                                                    alpha: 0.35,
+                                                  )
+                                                : Colors.white.withValues(
+                                                    alpha: 0.35,
+                                                  )),
+                                      size: 36,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: _session.cycleRepeatMode,
+                                    icon: Icon(
+                                      _repeatIcon(repeatMode),
+                                      color: repeatMode == RepeatMode.off
+                                          ? (isLight
+                                                ? Colors.black
+                                                : Colors.white)
+                                          : const Color(0xFF39D98A),
+                                      size: 26,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              child: Icon(
-                                _session.volume <= 0.01
-                                    ? Icons.volume_off_rounded
-                                    : Icons.volume_up_rounded,
-                                size: 22,
+                              SizedBox(height: compact ? 8 : 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  OutlinedButton(
+                                    onPressed: _isDownloading
+                                        ? null
+                                        : _downloadCurrentSong,
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                      ),
+                                      foregroundColor: isLight
+                                          ? Colors.black
+                                          : Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                      ),
+                                      padding: const EdgeInsets.all(12),
+                                      minimumSize: const Size(46, 46),
+                                    ),
+                                    child: _isDownloading
+                                        ? SizedBox(
+                                            height: 18,
+                                            width: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: isLight
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                            ),
+                                          )
+                                        : Icon(
+                                            Icons.download_rounded,
+                                            size: 20,
+                                            color: isLight
+                                                ? Colors.black
+                                                : Colors.white,
+                                          ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  SizedBox(
+                                    width: devicesCardWidth,
+                                    child: OutlinedButton.icon(
+                                      onPressed: _openDevicesSheet,
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.5,
+                                          ),
+                                        ),
+                                        foregroundColor: isLight
+                                            ? Colors.black
+                                            : Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            24,
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 10,
+                                        ),
+                                      ),
+                                      icon: const Icon(
+                                        Icons.speaker_group_rounded,
+                                        size: 18,
+                                      ),
+                                      label: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${_session.connectedOutputCount} device${_session.connectedOutputCount == 1 ? '' : 's'} connected',
+                                          ),
+                                          Text(
+                                            _session.availableDevices.join(
+                                              ' • ',
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  OutlinedButton(
+                                    onPressed: _openVolumeSheet,
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                      ),
+                                      foregroundColor: isLight
+                                          ? Colors.black
+                                          : Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                      ),
+                                      padding: const EdgeInsets.all(12),
+                                      minimumSize: const Size(46, 46),
+                                    ),
+                                    child: Icon(
+                                      _session.volume <= 0.01
+                                          ? Icons.volume_off_rounded
+                                          : Icons.volume_up_rounded,
+                                      size: 22,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        const Spacer(),
                       ],
                     ),
                   );
