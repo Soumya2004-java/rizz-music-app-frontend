@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../background/gradient_mesh_background.dart';
-import '../naviogations/tabbar.dart';
 import '../services/auth_store.dart';
 import '../views/profile/settings/profile_store.dart';
 
@@ -389,9 +388,8 @@ class _LoginPageState extends State<LoginPage>
       ),
     );
 
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const Tabbars()));
+    if (!mounted) return;
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   void _show(String message) {

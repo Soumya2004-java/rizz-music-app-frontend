@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -242,8 +243,9 @@ class _SearchPageState extends State<SearchPage> {
                       }
 
                       final allSongs = allSongsSnapshot.data ?? const <Song>[];
-                      final trendingSongs = allSongs.take(8).toList();
-                      final quickPicks = allSongs.take(6).toList();
+                      final quickPicks = _weeklyTrendingSongs(
+                        allSongs,
+                      ).take(6).toList();
 
                       return RefreshIndicator(
                         onRefresh: _refresh,
@@ -357,33 +359,6 @@ class _SearchPageState extends State<SearchPage> {
                                   child: _buildRecentSearches(),
                                 ),
                               ),
-                              if (trendingSongs.isNotEmpty) ...[
-                                SliverPadding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    _sidePadding,
-                                    22,
-                                    _sidePadding,
-                                    10,
-                                  ),
-                                  sliver: SliverToBoxAdapter(
-                                    child: _sectionTitle('Online Albums'),
-                                  ),
-                                ),
-                                SliverPadding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: _sidePadding,
-                                  ),
-                                  sliver: SliverList.separated(
-                                    itemCount: trendingSongs.length,
-                                    separatorBuilder: (_, __) =>
-                                        const SizedBox(height: 10),
-                                    itemBuilder: (context, index) {
-                                      final song = trendingSongs[index];
-                                      return _buildOnlineAlbumTile(song);
-                                    },
-                                  ),
-                                ),
-                              ],
                             ],
                             const SliverToBoxAdapter(
                               child: SizedBox(height: 110),
@@ -435,6 +410,19 @@ class _SearchPageState extends State<SearchPage> {
         ),
       ),
     ];
+  }
+
+  List<Song> _weeklyTrendingSongs(List<Song> songs) {
+    final shuffled = List<Song>.of(songs);
+    shuffled.shuffle(Random(_currentWeekSeed()));
+    return shuffled;
+  }
+
+  int _currentWeekSeed() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final weekStart = today.subtract(Duration(days: today.weekday - 1));
+    return weekStart.millisecondsSinceEpoch ~/ Duration.millisecondsPerDay;
   }
 
   Widget _buildHeader() {
@@ -857,65 +845,6 @@ class _SearchPageState extends State<SearchPage> {
                   Icons.play_arrow_rounded,
                   color: Colors.white.withValues(alpha: 0.9),
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOnlineAlbumTile(Song song) {
-    return GestureDetector(
-      onTap: () => _openAlbumFromSong(song),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-            ),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: SizedBox(
-                    width: 50,
-                    height: 50,
-                    child: _songImage(song.imageUrl),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        song.album,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        song.artist,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded, color: Colors.white70),
               ],
             ),
           ),

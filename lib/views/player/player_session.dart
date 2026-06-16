@@ -7,7 +7,9 @@ import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
+import '../../services/equalizer_service.dart';
 import '../../songs/songs.dart';
+import '../profile/settings/settings_store.dart';
 
 class LyricLine {
   final Duration at;
@@ -24,6 +26,7 @@ class PlayerSession {
   PlayerSession._() {
     _audioPlayer.setVolume(_volume);
     _initDeviceMonitoring();
+    _initEqualizerFromSavedSettings();
     _positionSub = _audioPlayer.positionStream.listen((position) {
       if (_isSimulatedPlayback) return;
       _position = position;
@@ -53,7 +56,12 @@ class PlayerSession {
 
   static final PlayerSession instance = PlayerSession._();
 
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final AudioPlayer _audioPlayer = AudioPlayer(
+    audioPipeline: AudioPipeline(
+      androidAudioEffects: EqualizerService.instance.androidEffects,
+      darwinAudioEffects: EqualizerService.instance.darwinEffects,
+    ),
+  );
   final StreamController<PlayerSnapshot> _controller =
       StreamController<PlayerSnapshot>.broadcast();
 
@@ -67,6 +75,7 @@ class PlayerSession {
   final Set<String> _likedSongIds = <String>{};
   final Random _random = Random();
   final List<String> _availableDevices = <String>[];
+  UserSettingsData _audioSettings = UserSettingsData.defaults();
   bool _isPlaying = false;
   bool _isMinimized = false;
   bool _isShuffleEnabled = false;
@@ -80,6 +89,7 @@ class PlayerSession {
   Timer? _ticker;
   bool _isTrackActionInProgress = false;
   int _trackActionToken = 0;
+  String _loadedAudioSourceKey = '';
 
   Song? get currentSong => _currentSong;
   bool get isPlaying => _isPlaying;
@@ -97,6 +107,10 @@ class PlayerSession {
   int get connectedOutputCount => _availableDevices.length;
   List<Song> get queue => List.unmodifiable(_queue);
   Set<String> get likedSongIds => Set.unmodifiable(_likedSongIds);
+  String get dolbyAtmosMode => _audioSettings.dolbyAtmos;
+  String get highResMusicMode => _audioSettings.highResMusic;
+  bool get isDolbyAtmosEnabled => _audioSettings.dolbyAtmos != 'Off';
+  bool get isHighResEnabled => _audioSettings.highResMusic == 'On';
   int get currentQueueIndex => _currentQueueIndex;
   bool get isCurrentSongLiked {
     final id = _currentSong?.id;
@@ -229,18 +243,28 @@ class PlayerSession {
     required int actionToken,
   }) async {
     try {
-      final uri = _audioUriForSong(song.audioUrl!);
+      final audioUrl = song.preferredAudioUrl(
+        dolbyAtmos: _audioSettings.dolbyAtmos,
+        highResMusic: _audioSettings.highResMusic,
+      );
+      if (audioUrl.isEmpty) {
+        throw StateError('No playable audio source found.');
+      }
+      final uri = _audioUriForSong(audioUrl);
+      final nextSourceKey = uri.toString();
       if (actionToken != _trackActionToken) return;
-      if (resetPosition) {
+      if (resetPosition || _loadedAudioSourceKey != nextSourceKey) {
         await _audioPlayer
             .setAudioSource(AudioSource.uri(uri, tag: _mediaItemForSong(song)))
             .timeout(_audioOpTimeout);
+        _loadedAudioSourceKey = nextSourceKey;
       }
       if (actionToken != _trackActionToken) return;
       if (!resetPosition && _audioPlayer.audioSource == null) {
         await _audioPlayer
             .setAudioSource(AudioSource.uri(uri, tag: _mediaItemForSong(song)))
             .timeout(_audioOpTimeout);
+        _loadedAudioSourceKey = nextSourceKey;
       }
       if (actionToken != _trackActionToken) return;
 
@@ -261,11 +285,9 @@ class PlayerSession {
       _emit();
     } catch (_) {
       if (actionToken != _trackActionToken) return;
-      // Fallback to simulated progress if source cannot load.
-      _isPlaying = autoPlay;
-      if (_isPlaying) {
-        _startTicker();
-      }
+      // Keep player stable on source errors; avoid instant skip loops.
+      _stopTicker();
+      _isPlaying = false;
       _emit();
     } finally {
       if (actionToken == _trackActionToken) {
@@ -287,7 +309,12 @@ class PlayerSession {
     if (song == null) return '';
     final id = song.id.trim();
     if (id.isNotEmpty) return 'id:$id';
-    final audio = (song.audioUrl ?? '').trim();
+    final audio = song
+        .preferredAudioUrl(
+          dolbyAtmos: _audioSettings.dolbyAtmos,
+          highResMusic: _audioSettings.highResMusic,
+        )
+        .trim();
     if (audio.isNotEmpty) return 'audio:$audio';
     return 'meta:${song.title.trim()}|${song.artist.trim()}|${song.album.trim()}';
   }
@@ -358,6 +385,53 @@ class PlayerSession {
     if ((next - _volume).abs() < 0.001) return;
     _volume = next;
     _audioPlayer.setVolume(_volume);
+    _emit();
+  }
+
+  Future<void> _initEqualizerFromSavedSettings() async {
+    try {
+      final s = await SettingsStore.fetchUserSettings();
+      _audioSettings = s;
+      await EqualizerService.instance.apply(
+        enabled: s.equalizerEnabled,
+        preset: s.equalizerPreset,
+        bandGains: s.equalizerBands,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> applyAudioSettings(UserSettingsData settings) async {
+    final changedAudioSource =
+        settings.dolbyAtmos != _audioSettings.dolbyAtmos ||
+        settings.highResMusic != _audioSettings.highResMusic;
+    _audioSettings = settings;
+
+    if (!changedAudioSource) {
+      _emit();
+      return;
+    }
+
+    final song = _currentSong;
+    if (song == null || !song.hasRemoteAudio) return;
+
+    final wasPlaying = _isPlaying;
+    final currentPosition = _position;
+    final actionToken = ++_trackActionToken;
+
+    _isTrackActionInProgress = true;
+    _emit();
+
+    await _playAudioSong(
+      song,
+      autoPlay: wasPlaying,
+      resetPosition: true,
+      actionToken: actionToken,
+    );
+
+    if (actionToken != _trackActionToken) return;
+    if (currentPosition > Duration.zero && currentPosition < _duration) {
+      seek(currentPosition);
+    }
     _emit();
   }
 

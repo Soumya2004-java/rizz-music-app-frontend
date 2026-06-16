@@ -56,6 +56,7 @@ class AppConfigData {
         'Jazz',
         'Electronic',
         'Vocal',
+        'Bass Boost',
       ],
       dolbyAtmosOptions: ['Automatic', 'Always On', 'Off'],
       highResOptions: ['On', 'Off'],
@@ -167,6 +168,8 @@ class UserSettingsData {
   final double bassLevel;
   final double midLevel;
   final double trebleLevel;
+  final List<double> equalizerBands;
+  final Map<String, List<double>> customEqualizerPresets;
   final String dolbyAtmos;
   final String highResMusic;
   final String equalizerPreset;
@@ -189,6 +192,8 @@ class UserSettingsData {
     required this.bassLevel,
     required this.midLevel,
     required this.trebleLevel,
+    this.equalizerBands = const [0, 0, 0, 0, 0, 0, 0, 0],
+    this.customEqualizerPresets = const {},
     required this.dolbyAtmos,
     required this.highResMusic,
     required this.equalizerPreset,
@@ -213,6 +218,8 @@ class UserSettingsData {
       bassLevel: 0,
       midLevel: 0,
       trebleLevel: 0,
+      equalizerBands: [0, 0, 0, 0, 0, 0, 0, 0],
+      customEqualizerPresets: {},
       dolbyAtmos: 'Automatic',
       highResMusic: 'On',
       equalizerPreset: 'Pop',
@@ -239,6 +246,47 @@ class UserSettingsData {
       return value.isEmpty ? fallback : value;
     }
 
+    List<double> bandList(String key, List<double> fallback) {
+      final raw = map[key];
+      if (raw is! List) return fallback;
+      final values = raw
+          .map((value) {
+            if (value is int) return value.toDouble();
+            if (value is double) return value;
+            return double.tryParse(value.toString());
+          })
+          .whereType<double>()
+          .map((value) => value.clamp(-12.0, 12.0).toDouble())
+          .toList();
+      if (values.length != 8) return fallback;
+      return values;
+    }
+
+    Map<String, List<double>> readCustomPresets() {
+      final raw = map['customEqualizerPresets'];
+      if (raw is! Map) return const {};
+
+      final presets = <String, List<double>>{};
+      for (final entry in raw.entries) {
+        final name = entry.key.toString().trim();
+        final value = entry.value;
+        if (name.isEmpty || value is! List) continue;
+        final bands = value
+            .map((band) {
+              if (band is int) return band.toDouble();
+              if (band is double) return band;
+              return double.tryParse(band.toString());
+            })
+            .whereType<double>()
+            .map((band) => band.clamp(-12.0, 12.0).toDouble())
+            .toList();
+        if (bands.length == 8) {
+          presets[name] = bands;
+        }
+      }
+      return presets;
+    }
+
     return UserSettingsData(
       wifiOnlyDownloads: b('wifiOnlyDownloads', d.wifiOnlyDownloads),
       normalizeAudio: b('normalizeAudio', d.normalizeAudio),
@@ -257,6 +305,8 @@ class UserSettingsData {
       bassLevel: n('bassLevel', d.bassLevel),
       midLevel: n('midLevel', d.midLevel),
       trebleLevel: n('trebleLevel', d.trebleLevel),
+      equalizerBands: bandList('equalizerBands', d.equalizerBands),
+      customEqualizerPresets: readCustomPresets(),
       dolbyAtmos: s('dolbyAtmos', d.dolbyAtmos),
       highResMusic: s('highResMusic', d.highResMusic),
       equalizerPreset: s('equalizerPreset', d.equalizerPreset),
@@ -282,6 +332,8 @@ class UserSettingsData {
       'bassLevel': bassLevel,
       'midLevel': midLevel,
       'trebleLevel': trebleLevel,
+      'equalizerBands': equalizerBands,
+      'customEqualizerPresets': customEqualizerPresets,
       'dolbyAtmos': dolbyAtmos,
       'highResMusic': highResMusic,
       'equalizerPreset': equalizerPreset,
@@ -289,6 +341,58 @@ class UserSettingsData {
       'language': language,
       'cacheLimit': cacheLimit,
     };
+  }
+
+  UserSettingsData copyWith({
+    bool? wifiOnlyDownloads,
+    bool? normalizeAudio,
+    bool? autoplay,
+    bool? crossfade,
+    bool? equalizerEnabled,
+    bool? pushNewReleases,
+    bool? pushRecommendations,
+    bool? privateSession,
+    bool? listeningActivityVisible,
+    bool? biometricLock,
+    double? crossfadeSeconds,
+    double? bassLevel,
+    double? midLevel,
+    double? trebleLevel,
+    List<double>? equalizerBands,
+    Map<String, List<double>>? customEqualizerPresets,
+    String? dolbyAtmos,
+    String? highResMusic,
+    String? equalizerPreset,
+    String? theme,
+    String? language,
+    String? cacheLimit,
+  }) {
+    return UserSettingsData(
+      wifiOnlyDownloads: wifiOnlyDownloads ?? this.wifiOnlyDownloads,
+      normalizeAudio: normalizeAudio ?? this.normalizeAudio,
+      autoplay: autoplay ?? this.autoplay,
+      crossfade: crossfade ?? this.crossfade,
+      equalizerEnabled: equalizerEnabled ?? this.equalizerEnabled,
+      pushNewReleases: pushNewReleases ?? this.pushNewReleases,
+      pushRecommendations: pushRecommendations ?? this.pushRecommendations,
+      privateSession: privateSession ?? this.privateSession,
+      listeningActivityVisible:
+          listeningActivityVisible ?? this.listeningActivityVisible,
+      biometricLock: biometricLock ?? this.biometricLock,
+      crossfadeSeconds: crossfadeSeconds ?? this.crossfadeSeconds,
+      bassLevel: bassLevel ?? this.bassLevel,
+      midLevel: midLevel ?? this.midLevel,
+      trebleLevel: trebleLevel ?? this.trebleLevel,
+      equalizerBands: equalizerBands ?? this.equalizerBands,
+      customEqualizerPresets:
+          customEqualizerPresets ?? this.customEqualizerPresets,
+      dolbyAtmos: dolbyAtmos ?? this.dolbyAtmos,
+      highResMusic: highResMusic ?? this.highResMusic,
+      equalizerPreset: equalizerPreset ?? this.equalizerPreset,
+      theme: theme ?? this.theme,
+      language: language ?? this.language,
+      cacheLimit: cacheLimit ?? this.cacheLimit,
+    );
   }
 }
 

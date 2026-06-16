@@ -5,6 +5,8 @@
     "artist": "Rizz Originals",
     "album": "Cloud Sessions",
     "audioPath": "music/rizz-originals/neon-nights.mp3",
+    "highResAudioPath": "music/rizz-originals/neon-nights.flac",
+    "dolbyAtmosAudioPath": "music/rizz-originals/neon-nights-atmos.m4a",
     "imagePath": "covers/rizz-originals/neon-nights.jpg",
     "durationSeconds": 207
   },
@@ -14,6 +16,8 @@
     "artist": "Rizz Originals",
     "album": "Cloud Sessions",
     "audioPath": "music/rizz-originals/morning-drive.mp3",
+    "highResAudioPath": "music/rizz-originals/morning-drive.flac",
+    "dolbyAtmosAudioPath": "music/rizz-originals/morning-drive-atmos.m4a",
     "imagePath": "covers/rizz-originals/morning-drive.jpg",
     "durationSeconds": 188
   }

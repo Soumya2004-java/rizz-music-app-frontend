@@ -60,7 +60,17 @@ class _HomePageState extends State<HomePage> {
               future: _albumsFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const HomePageSkeleton();
+                  return Column(
+                    children: [
+                      _HomeHeader(
+                        onProfileTap: () => _openProfile(context),
+                        onNotificationsTap: () => _openNotifications(context),
+                      ),
+                      const Expanded(
+                        child: HomePageSkeleton(showHeader: false),
+                      ),
+                    ],
+                  );
                 }
 
                 if (snapshot.hasError) {

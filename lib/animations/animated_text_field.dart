@@ -10,6 +10,7 @@ class AnimatedTextField extends StatefulWidget {
     required this.icon,
     required this.hint,
     this.obscure = false,
+
   });
 
   @override

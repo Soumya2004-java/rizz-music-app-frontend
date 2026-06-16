@@ -15,16 +15,26 @@ class Tabbars extends StatefulWidget {
   State<Tabbars> createState() => _TabbarsState();
 }
 
-class _TabbarsState extends State<Tabbars> with RouteAware {
+class _TabbarsState extends State<Tabbars>
+    with RouteAware, SingleTickerProviderStateMixin {
+  static const Duration _sectionSwitchDuration = Duration(milliseconds: 560);
+  static const Curve _sectionSwitchCurve = Curves.easeInOutCubic;
+
   int _currentIndex = 0;
+  int _previousIndex = 0;
   int _searchTabTapCount = 0;
-  late final PageController _pageController;
+  int _switchDirection = 1;
+  int _sectionSwitchToken = 0;
+  late final AnimationController _sectionSwitchController;
   late final List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: _currentIndex);
+    _sectionSwitchController = AnimationController(
+      vsync: this,
+      duration: _sectionSwitchDuration,
+    )..value = 1;
     _screens = [
       const HomePage(),
       SearchPage(key: ValueKey(_searchTabTapCount)),
@@ -48,7 +58,7 @@ class _TabbarsState extends State<Tabbars> with RouteAware {
   void dispose() {
     appRouteObserver.unsubscribe(this);
     tabBarVisibleNotifier.value = false;
-    _pageController.dispose();
+    _sectionSwitchController.dispose();
     super.dispose();
   }
 
@@ -81,16 +91,11 @@ class _TabbarsState extends State<Tabbars> with RouteAware {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
-      body: PageView(
-        controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(),
-        allowImplicitScrolling: true,
-        onPageChanged: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        children: _screens,
+      body: Stack(
+        children: List.generate(
+          _screens.length,
+          (index) => Positioned.fill(child: _buildSection(index)),
+        ),
       ),
 
       bottomNavigationBar: Padding(
@@ -190,6 +195,57 @@ class _TabbarsState extends State<Tabbars> with RouteAware {
     );
   }
 
+  void _switchToTab(int index) {
+    if (index == _currentIndex) return;
+
+    final token = ++_sectionSwitchToken;
+    setState(() {
+      _previousIndex = _currentIndex;
+      _switchDirection = index > _currentIndex ? 1 : -1;
+      _currentIndex = index;
+    });
+
+    _sectionSwitchController.forward(from: 0).whenComplete(() {
+      if (!mounted || token != _sectionSwitchToken) return;
+      setState(() {
+        _previousIndex = _currentIndex;
+      });
+    });
+  }
+
+  Widget _buildSection(int index) {
+    return AnimatedBuilder(
+      animation: _sectionSwitchController,
+      child: _screens[index],
+      builder: (context, child) {
+        final isCurrent = index == _currentIndex;
+        final isPrevious = index == _previousIndex && index != _currentIndex;
+        final isVisible = isCurrent || isPrevious;
+        final progress = _sectionSwitchCurve.transform(
+          _sectionSwitchController.value,
+        );
+        final offset = isCurrent
+            ? (1 - progress) * 0.12 * _switchDirection
+            : -progress * 0.08 * _switchDirection;
+        final opacity = isCurrent ? progress : 1 - progress;
+
+        return Offstage(
+          offstage: !isVisible,
+          child: TickerMode(
+            enabled: isVisible,
+            child: IgnorePointer(
+              ignoring: !isCurrent || _sectionSwitchController.isAnimating,
+              child: FractionalTranslation(
+                translation: Offset(offset, 0),
+                child: Opacity(opacity: opacity, child: child),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _navItem(
     IconData icon,
     int index,
@@ -206,18 +262,19 @@ class _TabbarsState extends State<Tabbars> with RouteAware {
             _searchTabTapCount++;
             _screens[1] = SearchPage(key: ValueKey(_searchTabTapCount));
           });
-          _pageController.jumpToPage(1);
           return;
         }
 
         if (index == _currentIndex) return;
 
-        _pageController.jumpToPage(index);
+        _switchToTab(index);
       },
       child: SizedBox(
         width: itemWidth,
         child: Center(
-          child: Container(
+          child: AnimatedContainer(
+            duration: _sectionSwitchDuration,
+            curve: _sectionSwitchCurve,
             width: itemWidth,
             height: 52,
             decoration: BoxDecoration(

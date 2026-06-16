@@ -551,14 +551,16 @@ class _DownloadPageState extends State<DownloadPage> {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                        child: Column(
-                          children: const [
-                            AppSkeletonBox(height: 74, radius: 14),
-                            SizedBox(height: 10),
-                            AppSkeletonBox(height: 74, radius: 14),
-                            SizedBox(height: 10),
-                            AppSkeletonBox(height: 74, radius: 14),
-                          ],
+                        child: AppSkeletonScope(
+                          child: Column(
+                            children: const [
+                              AppSkeletonBox(height: 74, radius: 14),
+                              SizedBox(height: 10),
+                              AppSkeletonBox(height: 74, radius: 14),
+                              SizedBox(height: 10),
+                              AppSkeletonBox(height: 74, radius: 14),
+                            ],
+                          ),
                         ),
                       ),
                     )

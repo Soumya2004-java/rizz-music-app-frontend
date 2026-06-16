@@ -197,6 +197,16 @@ class SongApi {
           path: data['audioPath'],
         );
 
+        data['highResAudioUrl'] = await _resolveStorageBackedUrl(
+          data['highResAudioUrl'],
+          path: data['highResAudioPath'],
+        );
+
+        data['dolbyAtmosAudioUrl'] = await _resolveStorageBackedUrl(
+          data['dolbyAtmosAudioUrl'],
+          path: data['dolbyAtmosAudioPath'],
+        );
+
         data['imageUrl'] = await _resolveStorageBackedUrl(
           data['imageUrl'],
           path: data['imagePath'],
@@ -280,6 +290,16 @@ class SongApi {
     data['audioUrl'] = await _resolveStorageBackedUrl(
       data['audioUrl'],
       path: data['audioPath'],
+    );
+
+    data['highResAudioUrl'] = await _resolveStorageBackedUrl(
+      data['highResAudioUrl'],
+      path: data['highResAudioPath'],
+    );
+
+    data['dolbyAtmosAudioUrl'] = await _resolveStorageBackedUrl(
+      data['dolbyAtmosAudioUrl'],
+      path: data['dolbyAtmosAudioPath'],
     );
 
     data['imageUrl'] = await _resolveStorageBackedUrl(

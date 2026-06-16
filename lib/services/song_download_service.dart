@@ -5,12 +5,19 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../songs/songs.dart';
+import '../views/profile/settings/settings_store.dart';
 
 class SongDownloadService {
   const SongDownloadService._();
 
   static Future<DownloadResult> downloadSong(Song song) async {
-    final audioUrl = (song.audioUrl ?? '').trim();
+    final settings = await SettingsStore.fetchUserSettings();
+    final audioUrl = song
+        .preferredAudioUrl(
+          dolbyAtmos: settings.dolbyAtmos,
+          highResMusic: settings.highResMusic,
+        )
+        .trim();
     if (audioUrl.isEmpty) {
       throw const SongDownloadException('No audio URL found for this song.');
     }
@@ -88,6 +95,8 @@ class SongDownloadService {
     if (path.endsWith('.webp')) return '.webp';
     if (path.endsWith('.m4a')) return '.m4a';
     if (path.endsWith('.aac')) return '.aac';
+    if (path.endsWith('.flac')) return '.flac';
+    if (path.endsWith('.alac')) return '.alac';
     if (path.endsWith('.wav')) return '.wav';
     if (path.endsWith('.ogg')) return '.ogg';
     return defaultExt;
@@ -106,6 +115,8 @@ class SongDownloadService {
       return name.endsWith('.mp3') ||
           name.endsWith('.m4a') ||
           name.endsWith('.aac') ||
+          name.endsWith('.flac') ||
+          name.endsWith('.alac') ||
           name.endsWith('.wav') ||
           name.endsWith('.ogg');
     }).toList();
