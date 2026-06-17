@@ -68,10 +68,10 @@ class AlbumPage extends StatelessWidget {
     final hasCover = hasAssetCover || hasNetworkCover;
 
     return Container(
-      width: 214,
-      height: 214,
+      width: 268,
+      height: 268,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(34),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -80,14 +80,14 @@ class AlbumPage extends StatelessWidget {
         boxShadow: const [
           BoxShadow(
             color: Color(0x66323a64),
-            blurRadius: 28,
-            spreadRadius: 2,
-            offset: Offset(0, 14),
+            blurRadius: 34,
+            spreadRadius: 4,
+            offset: Offset(0, 16),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(34),
         child: Stack(
           children: [
             if (hasCover)
@@ -111,16 +111,31 @@ class AlbumPage extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withValues(alpha: 0.08),
-                      Colors.black.withValues(alpha: 0.34),
+                      Colors.white.withValues(alpha: 0.04),
+                      Colors.black.withValues(alpha: 0.18),
+                      Colors.black.withValues(alpha: 0.68),
                     ],
+                    stops: const [0.0, 0.46, 1.0],
                   ),
                 ),
               ),
             ),
+            Positioned(
+              left: 16,
+              top: 16,
+              child: _heroChip(icon: Icons.album_rounded, label: 'Album'),
+            ),
+            Positioned(
+              right: 16,
+              top: 16,
+              child: _heroChip(
+                icon: Icons.music_note_rounded,
+                label: _songCountText(songs.length),
+              ),
+            ),
             if (!hasCover)
               const Center(
-                child: Icon(Icons.album_rounded, size: 64, color: Colors.white),
+                child: Icon(Icons.album_rounded, size: 76, color: Colors.white),
               ),
           ],
         ),
@@ -131,32 +146,32 @@ class AlbumPage extends StatelessWidget {
   Widget _actionButton(IconData icon, String label, VoidCallback onTap) {
     return Expanded(
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: onTap,
               child: Container(
-                height: 52,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.20),
+                    color: Colors.white.withValues(alpha: 0.18),
                   ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(icon, color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
+                    Icon(icon, color: Colors.white, size: 21),
+                    const SizedBox(width: 9),
                     Text(
                       label,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 15,
+                        fontSize: 14.5,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -164,6 +179,108 @@ class AlbumPage extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _heroChip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 11),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String label) {
+    return Text(
+      label.toUpperCase(),
+      style: TextStyle(
+        color: Colors.white.withValues(alpha: 0.70),
+        fontSize: 11,
+        letterSpacing: 1.4,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+
+  Widget _albumHeaderCard({
+    required String albumLabel,
+    required String artistLabel,
+    required int songCount,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.40),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                albumLabel,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  height: 1.0,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.8,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                artistLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.78),
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _heroChip(
+                    icon: Icons.music_note_rounded,
+                    label: _songCountText(songCount),
+                  ),
+                  _heroChip(
+                    icon: Icons.fiber_manual_record_rounded,
+                    label: 'Modern UI',
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -206,10 +323,7 @@ class AlbumPage extends StatelessWidget {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(
-            message,
-            style: const TextStyle(color: Colors.white),
-          ),
+          content: Text(message, style: const TextStyle(color: Colors.white)),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -274,11 +388,7 @@ class AlbumPage extends StatelessWidget {
     );
   }
 
-  void _addToQueue(
-    BuildContext context,
-    Song song, {
-    required bool playNext,
-  }) {
+  void _addToQueue(BuildContext context, Song song, {required bool playNext}) {
     final session = PlayerSession.instance;
     final queue = session.queue.toList();
     final currentSong = session.currentSong;
@@ -311,7 +421,9 @@ class AlbumPage extends StatelessWidget {
     session.setQueue(queue, currentSong: currentSong ?? queue.first);
     _showAnnouncement(
       context,
-      playNext ? 'Will play next: ${song.title}' : 'Added to queue: ${song.title}',
+      playNext
+          ? 'Will play next: ${song.title}'
+          : 'Added to queue: ${song.title}',
     );
   }
 
@@ -452,29 +564,29 @@ class AlbumPage extends StatelessWidget {
     required _SongMenuAction action,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           onTap: () => Navigator.pop(context, action),
           child: Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(14),
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
             ),
             child: Row(
               children: [
-                Icon(icon, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
+                Icon(icon, color: Colors.white, size: 21),
+                const SizedBox(width: 12),
                 Text(
                   label,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 14,
+                    fontSize: 14.5,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -496,11 +608,11 @@ class AlbumPage extends StatelessWidget {
     final hasImage = imageUrl.isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
@@ -508,33 +620,42 @@ class AlbumPage extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
-                  vertical: 11,
+                  vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(15),
+                  color: Colors.white.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.14),
+                    color: Colors.white.withValues(alpha: 0.16),
                   ),
                 ),
                 child: Row(
                   children: [
-                    SizedBox(
-                      width: 28,
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.10),
+                        ),
+                      ),
+                      alignment: Alignment.center,
                       child: Text(
                         '${index + 1}',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.66),
+                          color: Colors.white.withValues(alpha: 0.82),
                           fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
                     Container(
-                      width: 46,
-                      height: 46,
+                      width: 54,
+                      height: 54,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(16),
                         image: hasImage
                             ? DecorationImage(
                                 image: NetworkImage(imageUrl),
@@ -554,10 +675,10 @@ class AlbumPage extends StatelessWidget {
                           : const Icon(
                               Icons.music_note_rounded,
                               color: Colors.white,
-                              size: 20,
+                              size: 22,
                             ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -568,38 +689,42 @@ class AlbumPage extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Text(
                             song.artist,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.70),
-                              fontSize: 12.5,
+                              fontSize: 12.2,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(
-                      width: 30,
-                      height: 30,
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.10),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.12),
+                        ),
+                      ),
                       child: IconButton(
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
-                        splashRadius: 18,
-                        onPressed: () => _openSongOptionsSheet(
-                          context,
-                          song,
-                          songs,
-                        ),
+                        splashRadius: 20,
+                        onPressed: () =>
+                            _openSongOptionsSheet(context, song, songs),
                         icon: Icon(
-                          Icons.more_vert_rounded,
-                          color: Colors.white.withValues(alpha: 0.78),
+                          Icons.more_horiz_rounded,
+                          color: Colors.white.withValues(alpha: 0.82),
                           size: 20,
                         ),
                       ),
@@ -646,9 +771,9 @@ class AlbumPage extends StatelessWidget {
       slivers: [
         SliverAppBar(
           pinned: true,
-          expandedHeight: 390,
+          expandedHeight: 460,
           elevation: 0,
-          backgroundColor: Colors.black.withValues(alpha: 0.18),
+          backgroundColor: Colors.black.withValues(alpha: 0.24),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
             onPressed: () => Navigator.pop(context),
@@ -662,7 +787,7 @@ class AlbumPage extends StatelessWidget {
               albumLabel,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             background: Stack(
               children: [
@@ -674,9 +799,11 @@ class AlbumPage extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withValues(alpha: 0.12),
-                          Colors.black.withValues(alpha: 0.52),
+                          Colors.black.withValues(alpha: 0.08),
+                          Colors.black.withValues(alpha: 0.42),
+                          Colors.black.withValues(alpha: 0.82),
                         ],
+                        stops: const [0.0, 0.55, 1.0],
                       ),
                     ),
                   ),
@@ -688,8 +815,18 @@ class AlbumPage extends StatelessWidget {
                   ),
                 ),
                 Align(
-                  alignment: const Alignment(0, 0.72),
+                  alignment: const Alignment(0, 0.52),
                   child: _heroCover(songs),
+                ),
+                Positioned(
+                  left: 18,
+                  right: 18,
+                  bottom: 26,
+                  child: _albumHeaderCard(
+                    albumLabel: albumLabel,
+                    artistLabel: artistLabel,
+                    songCount: songs.length,
+                  ),
                 ),
               ],
             ),
@@ -697,29 +834,12 @@ class AlbumPage extends StatelessWidget {
         ),
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  artistLabel,
-                  style: TextStyle(
-                    fontSize: 13,
-                    letterSpacing: 0.2,
-                    color: Colors.white.withValues(alpha: 0.70),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _songCountText(songs.length),
-                  style: TextStyle(
-                    fontSize: 28,
-                    height: 1.05,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white.withValues(alpha: 0.95),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                _sectionLabel('Controls'),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     _actionButton(
@@ -737,7 +857,7 @@ class AlbumPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                     child: Material(
@@ -745,12 +865,12 @@ class AlbumPage extends StatelessWidget {
                       child: InkWell(
                         onTap: () => _downloadAllSongs(context, songs),
                         child: Container(
-                          height: 48,
+                          height: 54,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(16),
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(18),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.20),
+                              color: Colors.white.withValues(alpha: 0.18),
                             ),
                           ),
                           child: const Row(
@@ -767,7 +887,7 @@ class AlbumPage extends StatelessWidget {
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 15,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -778,13 +898,19 @@ class AlbumPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 22),
-                Text(
-                  'Tracks',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white.withValues(alpha: 0.95),
-                  ),
+                Row(
+                  children: [
+                    _sectionLabel('Tracks'),
+                    const Spacer(),
+                    Text(
+                      _songCountText(songs.length),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
               ],
@@ -796,17 +922,17 @@ class AlbumPage extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 22,
+                      horizontal: 18,
+                      vertical: 24,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.14),
                       ),
