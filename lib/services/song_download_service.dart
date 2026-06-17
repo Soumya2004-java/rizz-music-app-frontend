@@ -162,6 +162,19 @@ class SongDownloadService {
     return sourceFile.copy(targetPath);
   }
 
+  static Song toPlayableSong(DownloadedSong song) {
+    return Song(
+      id: 'download_${song.filePath.hashCode}',
+      title: song.title,
+      artist: song.artist,
+      album: 'Downloaded',
+      audioUrl: song.filePath,
+      imageUrl: (song.localCoverPath ?? '').trim().isNotEmpty
+          ? song.localCoverPath
+          : song.coverUrl,
+    );
+  }
+
   static DownloadedSong _toDownloadedSong(File file) {
     final fileName = file.uri.pathSegments.isNotEmpty
         ? file.uri.pathSegments.last
