@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../services/song_download_service.dart';
-import '../../background/gradient_mesh_background.dart';
 import '../../views/player/player_scrreen.dart';
 import '../../views/player/player_session.dart';
 import '../../widgets/app_skeletons.dart';
@@ -56,88 +55,173 @@ class AlbumPage extends StatelessWidget {
 
   String _songCountText(int count) => count == 1 ? '1 Song' : '$count Songs';
 
-  Widget _heroCover(List<Song> songs) {
+  String _coverSource(List<Song> songs) {
     final selectedCover = albumCover?.trim() ?? '';
-    final songCover = songs.isNotEmpty
-        ? (songs.first.imageUrl?.trim() ?? '')
-        : '';
-    final cover = selectedCover.isNotEmpty ? selectedCover : songCover;
-    final hasAssetCover = cover.startsWith('assets/');
-    final hasNetworkCover =
-        cover.startsWith('http://') || cover.startsWith('https://');
-    final hasCover = hasAssetCover || hasNetworkCover;
+    if (selectedCover.isNotEmpty) return selectedCover;
+    if (songs.isNotEmpty) return songs.first.imageUrl?.trim() ?? '';
+    return '';
+  }
 
+  bool _isAssetImage(String source) => source.startsWith('assets/');
+
+  bool _isNetworkImage(String source) =>
+      source.startsWith('http://') || source.startsWith('https://');
+
+  Widget _coverImage(String source, {BoxFit fit = BoxFit.cover}) {
+    final cover = source.trim();
+    if (_isAssetImage(cover)) {
+      return Image.asset(
+        cover,
+        fit: fit,
+        errorBuilder: (_, __, ___) => _coverFallback(),
+      );
+    }
+
+    if (_isNetworkImage(cover)) {
+      return Image.network(
+        cover,
+        fit: fit,
+        errorBuilder: (_, __, ___) => _coverFallback(),
+      );
+    }
+
+    return _coverFallback();
+  }
+
+  Widget _coverFallback() {
     return Container(
-      width: 268,
-      height: 268,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(34),
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xff7ec6ff), Color(0xffa88cff), Color(0xffff9dc6)],
+          colors: [Color(0xFF14151D), Color(0xFF4D576C), Color(0xFFB07388)],
         ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x66323a64),
-            blurRadius: 34,
-            spreadRadius: 4,
-            offset: Offset(0, 16),
-          ),
-        ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(34),
-        child: Stack(
-          children: [
-            if (hasCover)
-              Positioned.fill(
-                child: hasAssetCover
-                    ? Image.asset(
-                        cover,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                      )
-                    : Image.network(
-                        cover,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                      ),
+      alignment: Alignment.center,
+      child: const Icon(Icons.album_rounded, color: Colors.white70, size: 54),
+    );
+  }
+
+  Widget _blurredCoverBackground(List<Song> songs) {
+    final cover = _coverSource(songs);
+    final hasCover = _isAssetImage(cover) || _isNetworkImage(cover);
+
+    return Stack(
+      children: [
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF090A0F),
+                  Color(0xFF1A1B24),
+                  Color(0xFF11131B),
+                ],
               ),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.white.withValues(alpha: 0.04),
-                      Colors.black.withValues(alpha: 0.18),
-                      Colors.black.withValues(alpha: 0.68),
-                    ],
-                    stops: const [0.0, 0.46, 1.0],
+            ),
+          ),
+        ),
+        if (hasCover)
+          Positioned.fill(
+            child: Transform.scale(
+              scale: 1.16,
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(sigmaX: 38, sigmaY: 38),
+                child: _coverImage(cover),
+              ),
+            ),
+          ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.34),
+                  Colors.black.withValues(alpha: 0.54),
+                  Colors.black.withValues(alpha: 0.86),
+                ],
+                stops: const [0.0, 0.42, 1.0],
+              ),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(-0.75, -0.62),
+                radius: 1.25,
+                colors: [
+                  Colors.white.withValues(alpha: 0.16),
+                  Colors.white.withValues(alpha: 0.02),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.42, 1.0],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _heroCover(List<Song> songs) {
+    final cover = _coverSource(songs);
+
+    return AspectRatio(
+      aspectRatio: 1,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.45),
+              blurRadius: 36,
+              spreadRadius: 2,
+              offset: const Offset(0, 22),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Stack(
+            children: [
+              Positioned.fill(child: _coverImage(cover)),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.18),
+                        Colors.black.withValues(alpha: 0.46),
+                      ],
+                      stops: const [0.0, 0.56, 1.0],
+                    ),
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              left: 16,
-              top: 16,
-              child: _heroChip(icon: Icons.album_rounded, label: 'Album'),
-            ),
-            Positioned(
-              right: 16,
-              top: 16,
-              child: _heroChip(
-                icon: Icons.music_note_rounded,
-                label: _songCountText(songs.length),
+              Positioned(
+                left: 14,
+                top: 14,
+                child: _heroChip(icon: Icons.album_rounded, label: 'Album'),
               ),
-            ),
-            if (!hasCover)
-              const Center(
-                child: Icon(Icons.album_rounded, size: 76, color: Colors.white),
+              Positioned(
+                right: 14,
+                bottom: 14,
+                child: _heroChip(
+                  icon: Icons.music_note_rounded,
+                  label: _songCountText(songs.length),
+                ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -145,39 +229,42 @@ class AlbumPage extends StatelessWidget {
 
   Widget _actionButton(IconData icon, String label, VoidCallback onTap) {
     return Expanded(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              child: Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.18),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: onTap,
+          child: Ink(
+            height: 52,
+            decoration: BoxDecoration(
+              color: label == 'Play'
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.13),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: label == 'Play'
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.18),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: label == 'Play' ? Colors.black : Colors.white,
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: label == 'Play' ? Colors.black : Colors.white,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(icon, color: Colors.white, size: 21),
-                    const SizedBox(width: 9),
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
         ),
@@ -187,11 +274,11 @@ class AlbumPage extends StatelessWidget {
 
   Widget _heroChip({required IconData icon, required String label}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.34),
+        color: Colors.black.withValues(alpha: 0.38),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -215,70 +302,191 @@ class AlbumPage extends StatelessWidget {
     return Text(
       label.toUpperCase(),
       style: TextStyle(
-        color: Colors.white.withValues(alpha: 0.70),
+        color: Colors.white.withValues(alpha: 0.62),
         fontSize: 11,
-        letterSpacing: 1.4,
+        letterSpacing: 1.2,
         fontWeight: FontWeight.w700,
       ),
     );
   }
 
-  Widget _albumHeaderCard({
+  Widget _albumHeroText({
     required String albumLabel,
     required String artistLabel,
     required int songCount,
   }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.40),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _sectionLabel('Album'),
+        const SizedBox(height: 10),
+        Text(
+          albumLabel,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 36,
+            height: 0.98,
+            fontWeight: FontWeight.w900,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                albumLabel,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  height: 1.0,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.8,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                artistLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.78),
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          artistLabel,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.78),
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 9,
+          runSpacing: 9,
+          children: [
+            _heroChip(
+              icon: Icons.music_note_rounded,
+              label: _songCountText(songCount),
+            ),
+            _heroChip(icon: Icons.library_music_rounded, label: 'Collection'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _albumHero({
+    required BuildContext context,
+    required List<Song> songs,
+    required String albumLabel,
+    required String artistLabel,
+  }) {
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 74, 22, 30),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 580;
+            if (wide) {
+              final coverSize = math.min(300.0, constraints.maxWidth * 0.36);
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  _heroChip(
-                    icon: Icons.music_note_rounded,
-                    label: _songCountText(songCount),
-                  ),
-                  _heroChip(
-                    icon: Icons.fiber_manual_record_rounded,
-                    label: 'Modern UI',
+                  SizedBox(width: coverSize, child: _heroCover(songs)),
+                  const SizedBox(width: 28),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _albumHeroText(
+                        albumLabel: albumLabel,
+                        artistLabel: artistLabel,
+                        songCount: songs.length,
+                      ),
+                    ),
                   ),
                 ],
+              );
+            }
+
+            final coverSize = math.min(226.0, constraints.maxWidth * 0.62);
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: SizedBox(width: coverSize, child: _heroCover(songs)),
+                ),
+                const SizedBox(height: 22),
+                _albumHeroText(
+                  albumLabel: albumLabel,
+                  artistLabel: artistLabel,
+                  songCount: songs.length,
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _roundActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: 52,
+      height: 52,
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.13),
+        shape: const CircleBorder(),
+        child: IconButton(
+          tooltip: tooltip,
+          onPressed: onTap,
+          icon: Icon(icon, color: Colors.white, size: 22),
+        ),
+      ),
+    );
+  }
+
+  Widget _glassIconButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Material(
+          color: Colors.black.withValues(alpha: 0.28),
+          shape: const CircleBorder(),
+          child: IconButton(
+            tooltip: tooltip,
+            onPressed: onTap,
+            icon: Icon(icon, color: Colors.white, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _albumControlDock(BuildContext context, List<Song> songs) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(30),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.34),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+          ),
+          child: Row(
+            children: [
+              _actionButton(
+                Icons.play_arrow_rounded,
+                'Play',
+                () => _playAlbum(context, songs),
+              ),
+              const SizedBox(width: 10),
+              _actionButton(
+                Icons.shuffle_rounded,
+                'Shuffle',
+                () => _shuffleAlbum(context, songs),
+              ),
+              const SizedBox(width: 10),
+              _roundActionButton(
+                icon: Icons.download_rounded,
+                tooltip: 'Download all',
+                onTap: () => _downloadAllSongs(context, songs),
               ),
             ],
           ),
@@ -605,80 +813,54 @@ class AlbumPage extends StatelessWidget {
     List<Song> songs,
   ) {
     final imageUrl = song.imageUrl?.trim() ?? '';
-    final hasImage = imageUrl.isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: () => _playSongNow(context, song, songs),
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
+                  horizontal: 10,
+                  vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.black.withValues(alpha: 0.24),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.16),
+                    color: Colors.white.withValues(alpha: 0.12),
                   ),
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.10),
-                        ),
-                      ),
-                      alignment: Alignment.center,
+                    SizedBox(
+                      width: 34,
                       child: Text(
-                        '${index + 1}',
+                        '${index + 1}'.padLeft(2, '0'),
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.82),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                          color: Colors.white.withValues(alpha: 0.52),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0,
                         ),
                       ),
                     ),
-                    Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        image: hasImage
-                            ? DecorationImage(
-                                image: NetworkImage(imageUrl),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                        gradient: hasImage
-                            ? null
-                            : const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0xff7ec6ff), Color(0xffa88cff)],
-                              ),
+                    const SizedBox(width: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: SizedBox(
+                        width: 50,
+                        height: 50,
+                        child: _coverImage(imageUrl),
                       ),
-                      child: hasImage
-                          ? null
-                          : const Icon(
-                              Icons.music_note_rounded,
-                              color: Colors.white,
-                              size: 22,
-                            ),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -689,42 +871,40 @@ class AlbumPage extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 15.5,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 5),
                           Text(
-                            song.artist,
+                            song.artist.trim().isEmpty
+                                ? 'Unknown artist'
+                                : song.artist,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.70),
-                              fontSize: 12.2,
+                              color: Colors.white.withValues(alpha: 0.58),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Container(
+                    const SizedBox(width: 8),
+                    SizedBox(
                       width: 40,
                       height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.10),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.12),
-                        ),
-                      ),
                       child: IconButton(
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                         splashRadius: 20,
+                        tooltip: 'Track options',
                         onPressed: () =>
                             _openSongOptionsSheet(context, song, songs),
                         icon: Icon(
                           Icons.more_horiz_rounded,
-                          color: Colors.white.withValues(alpha: 0.82),
+                          color: Colors.white.withValues(alpha: 0.72),
                           size: 20,
                         ),
                       ),
@@ -771,27 +951,52 @@ class AlbumPage extends StatelessWidget {
       slivers: [
         SliverAppBar(
           pinned: true,
-          expandedHeight: 460,
+          stretch: true,
+          expandedHeight: 540,
           elevation: 0,
-          backgroundColor: Colors.black.withValues(alpha: 0.24),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            onPressed: () => Navigator.pop(context),
+          surfaceTintColor: Colors.transparent,
+          backgroundColor: Colors.black.withValues(alpha: 0.16),
+          foregroundColor: Colors.white,
+          leadingWidth: 64,
+          titleSpacing: 0,
+          title: Text(
+            albumLabel,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
           ),
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Center(
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: _glassIconButton(
+                  icon: Icons.arrow_back_ios_new_rounded,
+                  tooltip: 'Back',
+                  onTap: () => Navigator.pop(context),
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: _glassIconButton(
+                  icon: Icons.download_rounded,
+                  tooltip: 'Download all',
+                  onTap: () => _downloadAllSongs(context, songs),
+                ),
+              ),
+            ),
+          ],
           flexibleSpace: FlexibleSpaceBar(
-            titlePadding: const EdgeInsetsDirectional.only(
-              start: 18,
-              bottom: 12,
-            ),
-            title: Text(
-              albumLabel,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
+            collapseMode: CollapseMode.parallax,
             background: Stack(
               children: [
-                const GradientMeshBackground(),
                 Positioned.fill(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
@@ -799,34 +1004,20 @@ class AlbumPage extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
+                          Colors.black.withValues(alpha: 0.04),
                           Colors.black.withValues(alpha: 0.08),
-                          Colors.black.withValues(alpha: 0.42),
-                          Colors.black.withValues(alpha: 0.82),
+                          Colors.black.withValues(alpha: 0.68),
                         ],
-                        stops: const [0.0, 0.55, 1.0],
+                        stops: const [0.0, 0.54, 1.0],
                       ),
                     ),
                   ),
                 ),
-                Positioned.fill(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: const SizedBox.expand(),
-                  ),
-                ),
-                Align(
-                  alignment: const Alignment(0, 0.52),
-                  child: _heroCover(songs),
-                ),
-                Positioned(
-                  left: 18,
-                  right: 18,
-                  bottom: 26,
-                  child: _albumHeaderCard(
-                    albumLabel: albumLabel,
-                    artistLabel: artistLabel,
-                    songCount: songs.length,
-                  ),
+                _albumHero(
+                  context: context,
+                  songs: songs,
+                  albumLabel: albumLabel,
+                  artistLabel: artistLabel,
                 ),
               ],
             ),
@@ -834,70 +1025,12 @@ class AlbumPage extends StatelessWidget {
         ),
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _sectionLabel('Controls'),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _actionButton(
-                      Icons.play_arrow_rounded,
-                      'Play',
-                      () => _playAlbum(context, songs),
-                    ),
-                    const SizedBox(width: 12),
-                    _actionButton(
-                      Icons.shuffle_rounded,
-                      'Shuffle',
-                      () => _shuffleAlbum(context, songs),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => _downloadAllSongs(context, songs),
-                        child: Container(
-                          height: 54,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.18),
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.download_rounded,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Download all',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 22),
+                _albumControlDock(context, songs),
+                const SizedBox(height: 26),
                 Row(
                   children: [
                     _sectionLabel('Tracks'),
@@ -912,7 +1045,7 @@ class AlbumPage extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
               ],
             ),
           ),
@@ -920,26 +1053,48 @@ class AlbumPage extends StatelessWidget {
         if (songs.isEmpty)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(22),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 18,
                       vertical: 24,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.black.withValues(alpha: 0.26),
+                      borderRadius: BorderRadius.circular(22),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.14),
                       ),
                     ),
-                    child: const Text(
-                      'No songs found for this album.',
-                      style: TextStyle(color: Colors.white),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.music_off_rounded,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'No songs found for this album.',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -962,29 +1117,18 @@ class AlbumPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          const GradientMeshBackground(),
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.14),
-                    Colors.black.withValues(alpha: 0.46),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          FutureBuilder<List<Song>>(
-            future: _loadSongs(),
-            builder: _buildContent,
-          ),
-        ],
+      backgroundColor: const Color(0xFF08090D),
+      body: FutureBuilder<List<Song>>(
+        future: _loadSongs(),
+        builder: (context, snapshot) {
+          final songs = snapshot.data ?? const <Song>[];
+          return Stack(
+            children: [
+              _blurredCoverBackground(songs),
+              _buildContent(context, snapshot),
+            ],
+          );
+        },
       ),
     );
   }
