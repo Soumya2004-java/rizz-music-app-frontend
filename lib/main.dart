@@ -50,7 +50,11 @@ class MyApp extends StatelessWidget {
       home: ValueListenableBuilder<UserAccount?>(
         valueListenable: AuthStore.currentUser,
         builder: (context, user, _) {
-          if (user != null || FirebaseAuth.instance.currentUser != null) {
+          final hasFirebaseApp = Firebase.apps.isNotEmpty;
+          final firebaseUser = hasFirebaseApp
+              ? FirebaseAuth.instance.currentUser
+              : null;
+          if (user != null || firebaseUser != null) {
             return const Tabbars();
           }
           return const SignInOrSignUp();
