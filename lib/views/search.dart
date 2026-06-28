@@ -26,6 +26,7 @@ class _SearchPageState extends State<SearchPage> {
   late final TextEditingController _searchController;
   late final FocusNode _searchFocusNode;
   late Future<List<Song>> _allSongsFuture;
+  double _scrollOffset = 0;
 
   String _selectedMood = 'Trending';
   final List<String> _recentSearches = [
@@ -53,6 +54,30 @@ class _SearchPageState extends State<SearchPage> {
       'end': Color(0xFFFFA657),
     },
     {
+      'title': 'Hindi Love',
+      'icon': Icons.favorite_rounded,
+      'start': Color(0xFFFF5D8F),
+      'end': Color(0xFFFF8A5B),
+    },
+    {
+      'title': 'Sad Songs',
+      'icon': Icons.cloud_rounded,
+      'start': Color(0xFF5B6CFF),
+      'end': Color(0xFF8D9BFF),
+    },
+    {
+      'title': 'Punjabi',
+      'icon': Icons.music_video_rounded,
+      'start': Color(0xFFFFB347),
+      'end': Color(0xFFFF6F61),
+    },
+    {
+      'title': 'Bengali',
+      'icon': Icons.palette_rounded,
+      'start': Color(0xFF18A87C),
+      'end': Color(0xFF62DFA8),
+    },
+    {
       'title': 'Retro',
       'icon': Icons.graphic_eq_rounded,
       'start': Color(0xFF5D75FF),
@@ -61,18 +86,77 @@ class _SearchPageState extends State<SearchPage> {
     {
       'title': 'Indie',
       'icon': Icons.bolt_rounded,
-      'start': Color(0xFF18A87C),
-      'end': Color(0xFF62DFA8),
+      'start': Color(0xFFA45DFF),
+      'end': Color(0xFFFF76C4),
     },
     {
       'title': 'Lo-Fi',
       'icon': Icons.nights_stay_rounded,
-      'start': Color(0xFFA45DFF),
-      'end': Color(0xFFFF76C4),
+      'start': Color(0xFF2D9CDB),
+      'end': Color(0xFF56CCF2),
+    },
+    {
+      'title': 'Dance',
+      'icon': Icons.sports_gymnastics_rounded,
+      'start': Color(0xFFFF7A18),
+      'end': Color(0xFFFFB347),
+    },
+    {
+      'title': 'Devotional',
+      'icon': Icons.self_improvement_rounded,
+      'start': Color(0xFF6FCF97),
+      'end': Color(0xFF56CCF2),
+    },
+    {
+      'title': 'Hip Hop',
+      'icon': Icons.headphones_rounded,
+      'start': Color(0xFF3A7BD5),
+      'end': Color(0xFF00D2FF),
+    },
+    {
+      'title': 'Acoustic',
+      'icon': Icons.library_music_rounded,
+      'start': Color(0xFF8E8DFF),
+      'end': Color(0xFFB1A6FF),
+    },
+    {
+      'title': 'Classics',
+      'icon': Icons.album_rounded,
+      'start': Color(0xFFB06AB3),
+      'end': Color(0xFFF9A1BC),
     },
   ];
 
   bool get _showSearchResults => _searchController.text.trim().isNotEmpty;
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+
+    final nextOffset = notification.metrics.pixels.clamp(0.0, 1200.0);
+    if ((nextOffset - _scrollOffset).abs() < 1) return false;
+
+    if (!mounted) return false;
+    setState(() {
+      _scrollOffset = nextOffset;
+    });
+    return false;
+  }
+
+  double get _backgroundTintProgress => (_scrollOffset / 180).clamp(0.0, 1.0);
+
+  Color get _backgroundTopColor => Color.lerp(
+    const Color(0xFF111217).withValues(alpha: 0.18),
+    const Color(0xFF050505).withValues(alpha: 0.95),
+    _backgroundTintProgress,
+  )!;
+
+  Color get _backgroundBottomColor => Color.lerp(
+    const Color(0xFF16181E).withValues(alpha: 0.32),
+    const Color(0xFF000000).withValues(alpha: 1.0),
+    _backgroundTintProgress,
+  )!;
+
+  double get _backgroundRadialOpacity => _backgroundTintProgress;
 
   bool get _isApplePlatform {
     final platform = Theme.of(context).platform;
@@ -179,10 +263,27 @@ class _SearchPageState extends State<SearchPage> {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.14),
-                        Colors.black.withValues(alpha: 0.42),
-                      ],
+                      colors: [_backgroundTopColor, _backgroundBottomColor],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 180),
+                    opacity: _backgroundRadialOpacity,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: const Alignment(0.92, -0.82),
+                          radius: 1.15,
+                          colors: [
+                            const Color(0xFF000000).withValues(alpha: 0.0),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -249,121 +350,126 @@ class _SearchPageState extends State<SearchPage> {
 
                       return RefreshIndicator(
                         onRefresh: _refresh,
-                        child: CustomScrollView(
-                          primary: true,
-                          physics: const BouncingScrollPhysics(
-                            parent: AlwaysScrollableScrollPhysics(),
-                          ),
-                          keyboardDismissBehavior:
-                              ScrollViewKeyboardDismissBehavior.onDrag,
-                          slivers: [
-                            SliverToBoxAdapter(
-                              child: SizedBox(height: topInset + 12),
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: _handleScrollNotification,
+                          child: CustomScrollView(
+                            primary: true,
+                            physics: const BouncingScrollPhysics(
+                              parent: AlwaysScrollableScrollPhysics(),
                             ),
-                            SliverPadding(
-                              padding: const EdgeInsets.fromLTRB(
-                                _sidePadding,
-                                0,
-                                _sidePadding,
-                                0,
-                              ),
-                              sliver: SliverToBoxAdapter(child: _buildHeader()),
-                            ),
-                            SliverPadding(
-                              padding: const EdgeInsets.fromLTRB(
-                                _sidePadding,
-                                16,
-                                _sidePadding,
-                                0,
-                              ),
-                              sliver: SliverToBoxAdapter(
-                                child: _buildSearchBar(),
-                              ),
-                            ),
-                            SliverPadding(
-                              padding: const EdgeInsets.fromLTRB(
-                                _sidePadding,
-                                16,
-                                _sidePadding,
-                                0,
-                              ),
-                              sliver: SliverToBoxAdapter(
-                                child: _buildMoodRow(),
-                              ),
-                            ),
-                            if (_showSearchResults)
-                              ..._buildSearchResultsSlivers(allSongs)
-                            else ...[
-                              SliverPadding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  _sidePadding,
-                                  20,
-                                  _sidePadding,
-                                  8,
-                                ),
-                                sliver: SliverToBoxAdapter(
-                                  child: _sectionTitle('Trending This Week'),
-                                ),
-                              ),
+                            keyboardDismissBehavior:
+                                ScrollViewKeyboardDismissBehavior.onDrag,
+                            slivers: [
                               SliverToBoxAdapter(
-                                child: _buildQuickPicks(quickPicks),
+                                child: SizedBox(height: topInset + 12),
                               ),
                               SliverPadding(
                                 padding: const EdgeInsets.fromLTRB(
                                   _sidePadding,
-                                  24,
+                                  0,
                                   _sidePadding,
-                                  10,
+                                  0,
                                 ),
                                 sliver: SliverToBoxAdapter(
-                                  child: _sectionTitle('Browse All'),
-                                ),
-                              ),
-                              SliverPadding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: _sidePadding,
-                                ),
-                                sliver: SliverGrid(
-                                  gridDelegate:
-                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 2,
-                                        crossAxisSpacing: 12,
-                                        mainAxisSpacing: 12,
-                                        childAspectRatio: 1.05,
-                                      ),
-                                  delegate: SliverChildBuilderDelegate((
-                                    context,
-                                    index,
-                                  ) {
-                                    final genre = _genres[index];
-                                    return _buildGenreCard(genre);
-                                  }, childCount: _genres.length),
+                                  child: _buildHeader(),
                                 ),
                               ),
                               SliverPadding(
                                 padding: const EdgeInsets.fromLTRB(
                                   _sidePadding,
-                                  22,
+                                  16,
                                   _sidePadding,
-                                  10,
+                                  0,
                                 ),
                                 sliver: SliverToBoxAdapter(
-                                  child: _sectionTitle('Recent Searches'),
+                                  child: _buildSearchBar(),
                                 ),
                               ),
                               SliverPadding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: _sidePadding,
+                                padding: const EdgeInsets.fromLTRB(
+                                  _sidePadding,
+                                  16,
+                                  _sidePadding,
+                                  0,
                                 ),
                                 sliver: SliverToBoxAdapter(
-                                  child: _buildRecentSearches(),
+                                  child: _buildMoodRow(),
                                 ),
+                              ),
+                              if (_showSearchResults)
+                                ..._buildSearchResultsSlivers(allSongs)
+                              else ...[
+                                SliverPadding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    _sidePadding,
+                                    20,
+                                    _sidePadding,
+                                    8,
+                                  ),
+                                  sliver: SliverToBoxAdapter(
+                                    child: _sectionTitle('Trending This Week'),
+                                  ),
+                                ),
+                                SliverToBoxAdapter(
+                                  child: _buildQuickPicks(quickPicks),
+                                ),
+                                SliverPadding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    _sidePadding,
+                                    24,
+                                    _sidePadding,
+                                    10,
+                                  ),
+                                  sliver: SliverToBoxAdapter(
+                                    child: _sectionTitle('Browse All'),
+                                  ),
+                                ),
+                                SliverPadding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: _sidePadding,
+                                  ),
+                                  sliver: SliverGrid(
+                                    gridDelegate:
+                                        const SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: 2,
+                                          crossAxisSpacing: 12,
+                                          mainAxisSpacing: 12,
+                                          childAspectRatio: 1.05,
+                                        ),
+                                    delegate: SliverChildBuilderDelegate((
+                                      context,
+                                      index,
+                                    ) {
+                                      final genre = _genres[index];
+                                      return _buildGenreCard(genre, allSongs);
+                                    }, childCount: _genres.length),
+                                  ),
+                                ),
+                                SliverPadding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    _sidePadding,
+                                    22,
+                                    _sidePadding,
+                                    10,
+                                  ),
+                                  sliver: SliverToBoxAdapter(
+                                    child: _sectionTitle('Recent Searches'),
+                                  ),
+                                ),
+                                SliverPadding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: _sidePadding,
+                                  ),
+                                  sliver: SliverToBoxAdapter(
+                                    child: _buildRecentSearches(),
+                                  ),
+                                ),
+                              ],
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: 110),
                               ),
                             ],
-                            const SliverToBoxAdapter(
-                              child: SizedBox(height: 110),
-                            ),
-                          ],
+                          ),
                         ),
                       );
                     },
@@ -691,47 +797,71 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildGenreCard(Map<String, dynamic> genre) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [genre['start'] as Color, genre['end'] as Color],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (genre['start'] as Color).withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+  Widget _buildGenreCard(Map<String, dynamic> genre, List<Song> allSongs) {
+    final title = genre['title'] as String;
+    final icon = genre['icon'] as IconData;
+    final start = genre['start'] as Color;
+    final end = genre['end'] as Color;
+
+    return GestureDetector(
+      onTap: () => _openGenrePage(
+        title: title,
+        icon: icon,
+        start: start,
+        end: end,
+        songs: allSongs,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(genre['icon'] as IconData, color: Colors.white, size: 26),
-          const Spacer(),
-          Text(
-            genre['title'] as String,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [start, end],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Explore',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.92),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+          boxShadow: [
+            BoxShadow(
+              color: start.withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: Colors.white, size: 26),
+            const Spacer(),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Text(
+                  'Explore',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Colors.white.withValues(alpha: 0.9),
+                  size: 15,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -912,6 +1042,27 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
+  void _openGenrePage({
+    required String title,
+    required IconData icon,
+    required Color start,
+    required Color end,
+    required List<Song> songs,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _BrowseCategoryPage(
+          title: title,
+          icon: icon,
+          start: start,
+          end: end,
+          songs: songs,
+        ),
+      ),
+    );
+  }
+
   String _normalizeQuery(String value) {
     return value
         .trim()
@@ -936,4 +1087,395 @@ class _FocusSearchIntent extends Intent {
 
 class _ClearSearchIntent extends Intent {
   const _ClearSearchIntent();
+}
+
+class _BrowseCategoryPage extends StatelessWidget {
+  const _BrowseCategoryPage({
+    required this.title,
+    required this.icon,
+    required this.start,
+    required this.end,
+    required this.songs,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color start;
+  final Color end;
+  final List<Song> songs;
+
+  @override
+  Widget build(BuildContext context) {
+    final categorySongs = _categorySongs();
+    final heroSong = categorySongs.isNotEmpty ? categorySongs.first : null;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          const GradientMeshBackground(),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    start.withValues(alpha: 0.42),
+                    Colors.black.withValues(alpha: 0.82),
+                    Colors.black,
+                  ],
+                  stops: const [0, 0.38, 1],
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverAppBar(
+                  pinned: true,
+                  automaticallyImplyLeading: false,
+                  expandedHeight: 280,
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
+                  surfaceTintColor: Colors.transparent,
+                  backgroundColor: Colors.transparent,
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: _buildHero(context, categorySongs, heroSong),
+                  ),
+                ),
+                if (categorySongs.isEmpty)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Text(
+                        'No songs available for this category yet.',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
+                    sliver: SliverList.separated(
+                      itemCount: categorySongs.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        return _CategorySongTile(
+                          song: categorySongs[index],
+                          queue: categorySongs,
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHero(
+    BuildContext context,
+    List<Song> categorySongs,
+    Song? song,
+  ) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (song != null) _songImage(song.imageUrl) else _fallbackImage(),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.12),
+                start.withValues(alpha: 0.54),
+                Colors.black.withValues(alpha: 0.92),
+              ],
+              stops: const [0, 0.48, 1],
+            ),
+          ),
+        ),
+        Positioned(
+          left: 18,
+          right: 18,
+          bottom: 22,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(colors: [start, end]),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.28),
+                  ),
+                ),
+                child: Icon(icon, color: Colors.white, size: 25),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 38,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${categorySongs.length} tracks picked for this vibe',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.78),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (categorySongs.isNotEmpty)
+                FilledButton.icon(
+                  onPressed: () =>
+                      _playSong(context, categorySongs.first, categorySongs),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 12,
+                    ),
+                  ),
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text(
+                    'Play',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Song> _categorySongs() {
+    final keywords = _keywordsForTitle(title);
+    final matched = songs.where((song) {
+      final text = _normalizeCategoryText(
+        '${song.title} ${song.artist} ${song.album}',
+      );
+      return keywords.any(text.contains);
+    }).toList();
+
+    if (matched.isNotEmpty) return matched.take(40).toList();
+
+    final fallback = List<Song>.of(songs);
+    fallback.shuffle(Random(title.hashCode));
+    return fallback.take(30).toList();
+  }
+
+  List<String> _keywordsForTitle(String title) {
+    switch (_normalizeCategoryText(title)) {
+      case 'hindi love':
+        return const ['love', 'romance', 'romantic', 'dil', 'pyaar', 'ishq'];
+      case 'sad songs':
+        return const ['sad', 'dard', 'alone', 'heartbreak', 'judai', 'bewafa'];
+      case 'punjabi':
+        return const ['punjabi', 'punjab', 'sidhu', 'diljit', 'ap dhillon'];
+      case 'bengali':
+        return const ['bengali', 'bangla', 'kolkata', 'rabindra'];
+      case 'retro':
+        return const ['retro', 'old', 'classic', 'kishore', 'asha', 'r d'];
+      case 'lo fi':
+        return const ['lofi', 'lo fi', 'chill', 'slowed', 'reverb'];
+      case 'devotional':
+        return const ['bhajan', 'devotional', 'krishna', 'shiv', 'ram'];
+      case 'hip hop':
+        return const ['hip hop', 'rap', 'rapper', 'gully'];
+      case 'acoustic':
+        return const ['acoustic', 'unplugged', 'guitar'];
+      case 'classics':
+        return const ['classic', 'golden', 'kishore', 'lata', 'mohammed'];
+      case 'dance':
+        return const ['dance', 'party', 'club', 'remix', 'beat'];
+      case 'indie':
+        return const ['indie', 'independent', 'prateek', 'local train'];
+      case 'desi pop':
+        return const ['desi', 'pop', 'bollywood', 'hindi'];
+      default:
+        return _normalizeCategoryText(title).split(' ');
+    }
+  }
+
+  String _normalizeCategoryText(String value) {
+    return value
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  Widget _songImage(String? imageUrl) {
+    final source = (imageUrl ?? '').trim();
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return AppCachedImage(url: source, fit: BoxFit.cover);
+    }
+    if (source.isNotEmpty) {
+      return Image.asset(
+        source,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _fallbackImage(),
+      );
+    }
+    return _fallbackImage();
+  }
+
+  Widget _fallbackImage() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [start, end],
+        ),
+      ),
+      child: Icon(icon, color: Colors.white, size: 64),
+    );
+  }
+
+  void _playSong(BuildContext context, Song song, List<Song> queue) {
+    final session = PlayerSession.instance;
+    session.setQueue(queue, currentSong: song);
+    session.playSong(song);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PlayerScreen(song: song)),
+    );
+  }
+}
+
+class _CategorySongTile extends StatelessWidget {
+  const _CategorySongTile({required this.song, required this.queue});
+
+  final Song song;
+  final List<Song> queue;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _play(context),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.11),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+            ),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: _songImage(song.imageUrl),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        song.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${song.artist} • ${song.album}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.14),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _songImage(String? imageUrl) {
+    final source = (imageUrl ?? '').trim();
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return AppCachedImage(url: source, fit: BoxFit.cover);
+    }
+    if (source.isNotEmpty) {
+      return Image.asset(
+        source,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _fallbackImage(),
+      );
+    }
+    return _fallbackImage();
+  }
+
+  Widget _fallbackImage() {
+    return Container(
+      color: Colors.white.withValues(alpha: 0.13),
+      child: const Icon(Icons.music_note_rounded, color: Colors.white),
+    );
+  }
+
+  void _play(BuildContext context) {
+    final session = PlayerSession.instance;
+    session.setQueue(queue, currentSong: song);
+    session.playSong(song);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PlayerScreen(song: song)),
+    );
+  }
 }

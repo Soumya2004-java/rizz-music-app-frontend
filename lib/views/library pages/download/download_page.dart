@@ -517,9 +517,12 @@ class _DownloadPageState extends State<DownloadPage> {
                 slivers: [
                   SliverAppBar(
                     pinned: true,
+                    automaticallyImplyLeading: false,
                     expandedHeight: 172,
-                    backgroundColor: Colors.black.withValues(alpha: 0.16),
                     elevation: 0,
+                    scrolledUnderElevation: 0,
+                    surfaceTintColor: Colors.transparent,
+                    backgroundColor: Colors.transparent,
                     title: const Text(
                       'Downloads',
                       style: TextStyle(fontWeight: FontWeight.w700),

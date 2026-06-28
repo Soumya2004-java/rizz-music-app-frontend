@@ -98,13 +98,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
             children: [
               Row(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(
-                      Icons.arrow_back_rounded,
-                      color: Colors.white,
-                    ),
-                  ),
                   const Text(
                     'Edit Profile',
                     style: TextStyle(

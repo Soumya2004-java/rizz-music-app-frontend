@@ -296,21 +296,6 @@ class _EqualizerPageState extends State<EqualizerPage> {
                               padding: headerPadding,
                               child: Row(
                                 children: [
-                                  IconButton(
-                                    visualDensity: VisualDensity.compact,
-                                    constraints: const BoxConstraints(
-                                      minWidth: 40,
-                                      minHeight: 40,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(),
-                                    icon: const Icon(
-                                      Icons.arrow_back_rounded,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
                                       'Equalizer',

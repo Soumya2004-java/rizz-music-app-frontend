@@ -90,7 +90,11 @@ class _SongsPageState extends State<SongsPage> {
                   slivers: [
                     SliverAppBar(
                       pinned: true,
-                      backgroundColor: Colors.black.withValues(alpha: 0.16),
+                      automaticallyImplyLeading: false,
+                      elevation: 0,
+                      scrolledUnderElevation: 0,
+                      surfaceTintColor: Colors.transparent,
+                      backgroundColor: Colors.transparent,
                       title: Text(widget.title),
                     ),
                     if (songs.isEmpty)

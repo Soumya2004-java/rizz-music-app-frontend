@@ -98,7 +98,11 @@ class _PlaylistPageState extends State<PlaylistPage> {
                   slivers: [
                     SliverAppBar(
                       pinned: true,
-                      backgroundColor: Colors.black.withValues(alpha: 0.16),
+                      automaticallyImplyLeading: false,
+                      elevation: 0,
+                      scrolledUnderElevation: 0,
+                      surfaceTintColor: Colors.transparent,
+                      backgroundColor: Colors.transparent,
                       title: Text(
                         widget.playlistName.trim().isEmpty
                             ? 'Playlists'
@@ -147,50 +151,55 @@ class _PlaylistPageState extends State<PlaylistPage> {
       borderRadius: BorderRadius.circular(14),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: ListTile(
-          tileColor: Colors.white.withValues(alpha: 0.1),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
-          ),
-          onTap: () async {
-            final songs = await MusicRepository.fetchSongsForPlaylist(playlist);
-            if (!context.mounted) return;
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    _PlaylistSongsScreen(playlist: playlist, songs: songs),
-              ),
-            );
-          },
-          leading: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: SizedBox(
-              width: 44,
-              height: 44,
-              child: playlist.imageUrl.startsWith('http')
-                  ? AppCachedImage(
-                      url: playlist.imageUrl,
-                      width: 44,
-                      height: 44,
-                    )
-                  : _fallbackCover(),
+        child: Material(
+          type: MaterialType.transparency,
+          child: ListTile(
+            tileColor: Colors.white.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
             ),
-          ),
-          title: Text(
-            playlist.name,
-            style: const TextStyle(color: Colors.white),
-          ),
-          subtitle: Text(
-            playlist.description.isEmpty
-                ? '${playlist.songIds.length} songs'
-                : playlist.description,
-            style: const TextStyle(color: Colors.white70),
-          ),
-          trailing: const Icon(
-            Icons.chevron_right_rounded,
-            color: Colors.white,
+            onTap: () async {
+              final songs = await MusicRepository.fetchSongsForPlaylist(
+                playlist,
+              );
+              if (!context.mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      _PlaylistSongsScreen(playlist: playlist, songs: songs),
+                ),
+              );
+            },
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: playlist.imageUrl.startsWith('http')
+                    ? AppCachedImage(
+                        url: playlist.imageUrl,
+                        width: 44,
+                        height: 44,
+                      )
+                    : _fallbackCover(),
+              ),
+            ),
+            title: Text(
+              playlist.name,
+              style: const TextStyle(color: Colors.white),
+            ),
+            subtitle: Text(
+              playlist.description.isEmpty
+                  ? '${playlist.songIds.length} songs'
+                  : playlist.description,
+              style: const TextStyle(color: Colors.white70),
+            ),
+            trailing: const Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white,
+            ),
           ),
         ),
       ),
@@ -215,7 +224,14 @@ class _PlaylistSongsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(title: Text(playlist.name), backgroundColor: Colors.black),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        title: Text(playlist.name),
+        backgroundColor: Colors.transparent,
+      ),
       body: songs.isEmpty
           ? const Center(
               child: Text(

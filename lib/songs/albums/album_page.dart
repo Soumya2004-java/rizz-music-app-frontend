@@ -952,32 +952,18 @@ class AlbumPage extends StatelessWidget {
         SliverAppBar(
           pinned: true,
           stretch: true,
+          automaticallyImplyLeading: false,
           expandedHeight: 540,
           elevation: 0,
+          scrolledUnderElevation: 0,
           surfaceTintColor: Colors.transparent,
-          backgroundColor: Colors.black.withValues(alpha: 0.16),
+          backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
-          leadingWidth: 64,
-          titleSpacing: 0,
           title: Text(
             albumLabel,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-          ),
-          leading: Padding(
-            padding: const EdgeInsets.only(left: 12),
-            child: Center(
-              child: SizedBox(
-                width: 44,
-                height: 44,
-                child: _glassIconButton(
-                  icon: Icons.arrow_back_ios_new_rounded,
-                  tooltip: 'Back',
-                  onTap: () => Navigator.pop(context),
-                ),
-              ),
-            ),
           ),
           actions: [
             Padding(

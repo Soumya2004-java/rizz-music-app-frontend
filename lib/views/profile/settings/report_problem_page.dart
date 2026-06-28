@@ -76,13 +76,6 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
               children: [
                 Row(
                   children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(
-                        Icons.arrow_back_rounded,
-                        color: Colors.white,
-                      ),
-                    ),
                     const Text(
                       'Report a Problem',
                       style: TextStyle(

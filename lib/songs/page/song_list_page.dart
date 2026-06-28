@@ -53,7 +53,11 @@ class SongListPage extends StatelessWidget {
                   slivers: [
                     SliverAppBar(
                       pinned: true,
-                      backgroundColor: Colors.black.withValues(alpha: 0.16),
+                      automaticallyImplyLeading: false,
+                      elevation: 0,
+                      scrolledUnderElevation: 0,
+                      surfaceTintColor: Colors.transparent,
+                      backgroundColor: Colors.transparent,
                       title: const Text('Rizz Music'),
                     ),
                     SliverPadding(

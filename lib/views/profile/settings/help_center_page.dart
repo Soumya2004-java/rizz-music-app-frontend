@@ -45,13 +45,6 @@ class HelpCenterPage extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(
-                          Icons.arrow_back_rounded,
-                          color: Colors.white,
-                        ),
-                      ),
                       const Text(
                         'Help Center',
                         style: TextStyle(

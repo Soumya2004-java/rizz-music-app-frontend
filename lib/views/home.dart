@@ -56,8 +56,8 @@ class _HomePageState extends State<HomePage> {
       MusicRepository.clearCaches();
     }
 
-    final isOnline = await _hasInternetConnection();
-    if (!isOnline) {
+    final isDeviceOffline = await _isDeviceOffline();
+    if (isDeviceOffline) {
       final downloads = await SongDownloadService.listDownloadedSongs();
       return _HomeData.offline(downloads);
     }
@@ -66,17 +66,18 @@ class _HomePageState extends State<HomePage> {
     return _HomeData.online(albums);
   }
 
-  Future<bool> _hasInternetConnection() async {
+  Future<bool> _isDeviceOffline() async {
     try {
-      final result = await InternetAddress.lookup(
-        'example.com',
-      ).timeout(const Duration(seconds: 3));
-      return result.isNotEmpty &&
-          result.any((address) => address.rawAddress.isNotEmpty);
+      final interfaces = await NetworkInterface.list(
+        includeLoopback: false,
+        includeLinkLocal: true,
+        type: InternetAddressType.any,
+      ).timeout(const Duration(seconds: 2));
+      return interfaces.isEmpty;
     } on SocketException {
-      return false;
+      return true;
     } on TimeoutException {
-      return false;
+      return true;
     } catch (_) {
       return false;
     }
@@ -1231,15 +1232,7 @@ class _HomeHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _greetingForNow(),
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -1,
-                  ),
-                ),
+                const _GreetingText(),
                 SizedBox(height: 4),
                 Text(
                   statusSubtitle ?? 'Pick up where you left off',
@@ -1291,13 +1284,53 @@ class _HomeHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+class _GreetingText extends StatefulWidget {
+  const _GreetingText();
+
+  @override
+  State<_GreetingText> createState() => _GreetingTextState();
+}
+
+class _GreetingTextState extends State<_GreetingText> {
+  late Timer _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer.cancel();
+    super.dispose();
+  }
 
   String _greetingForNow() {
-    final hour = DateTime.now().hour;
+    final hour = DateTime.now().toLocal().hour;
     if (hour >= 5 && hour < 12) return 'Good Morning';
     if (hour >= 12 && hour < 17) return 'Good Afternoon';
     if (hour >= 17 && hour < 22) return 'Good Evening';
     return 'Good Night';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      _greetingForNow(),
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 30,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -1,
+      ),
+    );
   }
 }
 

@@ -62,11 +62,6 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
             children: [
               Row(
                 children: [
-                  _CircleGlassButton(
-                    icon: Icons.arrow_back_rounded,
-                    onTap: () => Navigator.of(context).pop(),
-                  ),
-                  const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
                       'Change Password',
@@ -236,30 +231,6 @@ class _SectionCard extends StatelessWidget {
           ),
           child: child,
         ),
-      ),
-    );
-  }
-}
-
-class _CircleGlassButton extends StatelessWidget {
-  const _CircleGlassButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 42,
-        width: 42,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-        ),
-        child: Icon(icon, color: Colors.white, size: 22),
       ),
     );
   }
