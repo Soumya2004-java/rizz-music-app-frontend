@@ -121,18 +121,7 @@ class _HomePageState extends State<HomePage> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Color.lerp(
-                      const Color(0xFF111217).withValues(alpha: 0.18),
-                      const Color(0xFF050505).withValues(alpha: 0.95),
-                      _backgroundTintProgress,
-                    )!,
-                    Color.lerp(
-                      const Color(0xFF16181E).withValues(alpha: 0.32),
-                      const Color(0xFF000000).withValues(alpha: 1.0),
-                      _backgroundTintProgress,
-                    )!,
-                  ],
+                  colors: const [Colors.black, Colors.black],
                 ),
               ),
             ),
@@ -549,7 +538,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             SizedBox(
-              height: 130,
+              height: 148,
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
                 scrollDirection: Axis.horizontal,
@@ -573,13 +562,13 @@ class _HomePageState extends State<HomePage> {
         MaterialPageRoute(builder: (_) => AlbumPage(artist: artist.name)),
       ),
       child: SizedBox(
-        width: 78,
+        width: 94,
         child: Column(
           children: [
             Container(
-              width: 76,
-              height: 76,
-              padding: const EdgeInsets.all(2),
+              width: 92,
+              height: 92,
+              padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(
@@ -605,7 +594,7 @@ class _HomePageState extends State<HomePage> {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -616,7 +605,7 @@ class _HomePageState extends State<HomePage> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.58),
-                fontSize: 10,
+                fontSize: 11,
               ),
             ),
           ],
@@ -692,110 +681,135 @@ class _HomePageState extends State<HomePage> {
     final isLight = Theme.of(context).brightness == Brightness.light;
     return _PressScale(
       onTap: () => _openAlbum(context, album),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(26),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.28),
-              blurRadius: 28,
-              offset: const Offset(0, 14),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(26),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Positioned.fill(child: _albumImage(album.imageUrl)),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.10),
-                        Colors.black.withValues(alpha: 0.30),
-                        Colors.black.withValues(alpha: 0.82),
-                      ],
-                      stops: const [0.0, 0.52, 1.0],
-                    ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // This enlarged, blurred artwork sits behind the card, so every
+          // slide gets a backlight that matches its own album colours.
+          Positioned.fill(
+            left: -12,
+            top: -12,
+            right: -12,
+            bottom: -18,
+            child: IgnorePointer(
+              child: Opacity(
+                opacity: isLight ? 0.50 : 0.70,
+                child: ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(36),
+                    child: _albumImage(album.imageUrl),
                   ),
                 ),
               ),
-              Positioned(
-                top: 14,
-                left: 14,
-                right: 14,
-                child: Row(
-                  children: [
-                    _tileBadge(
-                      label: 'Featured',
-                      icon: Icons.auto_awesome_rounded,
-                    ),
-                    const Spacer(),
-                    _tileActionChip(
-                      icon: Icons.play_arrow_rounded,
-                      label: 'Play',
-                    ),
-                  ],
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(26),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.30),
+                  blurRadius: 28,
+                  offset: const Offset(0, 14),
                 ),
-              ),
-              Positioned(
-                left: 18,
-                right: 18,
-                bottom: 18,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      album.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: isLight ? Colors.black : Colors.white,
-                        fontSize: 23,
-                        height: 1.05,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.6,
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(26),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Positioned.fill(child: _albumImage(album.imageUrl)),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.10),
+                            Colors.black.withValues(alpha: 0.30),
+                            Colors.black.withValues(alpha: 0.82),
+                          ],
+                          stops: const [0.0, 0.52, 1.0],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
+                  ),
+                  Positioned(
+                    top: 14,
+                    left: 14,
+                    right: 14,
+                    child: Row(
                       children: [
-                        Expanded(
-                          child: Text(
-                            album.artist,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: isLight
-                                  ? Colors.black87
-                                  : Colors.white.withValues(alpha: 0.88),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                        _tileBadge(
+                          label: 'Featured',
+                          icon: Icons.auto_awesome_rounded,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${album.trackCount} tracks',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.80),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        const Spacer(),
+                        _tileActionChip(
+                          icon: Icons.play_arrow_rounded,
+                          label: 'Play',
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  Positioned(
+                    left: 18,
+                    right: 18,
+                    bottom: 18,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          album.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isLight ? Colors.black : Colors.white,
+                            fontSize: 23,
+                            height: 1.05,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.6,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                album.artist,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: isLight
+                                      ? Colors.black87
+                                      : Colors.white.withValues(alpha: 0.88),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${album.trackCount} tracks',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.80),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
