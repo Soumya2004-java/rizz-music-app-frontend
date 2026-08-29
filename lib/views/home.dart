@@ -3,14 +3,18 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../background/gradient_mesh_background.dart';
 import '../music/music_repository.dart';
 import '../songs/albums/album_page.dart';
+import '../songs/songs.dart';
 import '../services/song_download_service.dart';
 import '../views/library pages/download/download_page.dart';
 import '../views/library pages/Albums/albums_page.dart';
+import '../views/library pages/Artsts/artists_page.dart';
 import '../views/profile/profile.dart';
+import '../views/search.dart';
 import '../views/player/player_scrreen.dart';
 import '../views/player/player_session.dart';
 import '../widgets/app_cached_image.dart';
@@ -25,21 +29,28 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late Future<_HomeData> _homeFuture;
+  late Future<List<Song>> _browseSongsFuture;
+  late Future<List<ArtistSummary>> _favoriteArtistsFuture;
   PageController? _featuredPageController;
   Timer? _featuredAutoPlayTimer;
   int _featuredPageIndex = 0;
   int _featuredItemCount = 0;
+  int _featuredLoopStartPage = 0;
   double _scrollOffset = 0;
 
   @override
   void initState() {
     super.initState();
     _homeFuture = _loadHomeData();
+    _browseSongsFuture = MusicRepository.fetchSongs();
+    _favoriteArtistsFuture = MusicRepository.fetchArtists();
   }
 
   Future<void> _refresh() async {
     setState(() {
       _homeFuture = _loadHomeData(forceRefresh: true);
+      _browseSongsFuture = MusicRepository.fetchSongs();
+      _favoriteArtistsFuture = MusicRepository.fetchArtists();
     });
     await _homeFuture;
   }
@@ -56,8 +67,8 @@ class _HomePageState extends State<HomePage> {
       MusicRepository.clearCaches();
     }
 
-    final isDeviceOffline = await _isDeviceOffline();
-    if (isDeviceOffline) {
+    final isOnline = await _hasInternetConnection();
+    if (!isOnline) {
       final downloads = await SongDownloadService.listDownloadedSongs();
       return _HomeData.offline(downloads);
     }
@@ -66,18 +77,17 @@ class _HomePageState extends State<HomePage> {
     return _HomeData.online(albums);
   }
 
-  Future<bool> _isDeviceOffline() async {
+  Future<bool> _hasInternetConnection() async {
     try {
-      final interfaces = await NetworkInterface.list(
-        includeLoopback: false,
-        includeLinkLocal: true,
-        type: InternetAddressType.any,
-      ).timeout(const Duration(seconds: 2));
-      return interfaces.isEmpty;
+      final result = await InternetAddress.lookup(
+        'example.com',
+      ).timeout(const Duration(seconds: 3));
+      return result.isNotEmpty &&
+          result.any((address) => address.rawAddress.isNotEmpty);
     } on SocketException {
-      return true;
+      return false;
     } on TimeoutException {
-      return true;
+      return false;
     } catch (_) {
       return false;
     }
@@ -159,6 +169,7 @@ class _HomePageState extends State<HomePage> {
                       _HomeHeader(
                         onProfileTap: () => _openProfile(context),
                         onNotificationsTap: () => _openNotifications(context),
+                        onSearchTap: () => _openSearch(context),
                       ),
                       const Expanded(
                         child: HomePageSkeleton(showHeader: false),
@@ -202,7 +213,11 @@ class _HomePageState extends State<HomePage> {
                   );
                 }
 
-                final featured = albums.take(8).toList();
+                final uniqueAlbums = _uniqueAlbums(albums);
+                final featured = uniqueAlbums.take(8).toList();
+                final madeForYou = uniqueAlbums.skip(8).take(10).toList();
+                final trendingNow = uniqueAlbums.skip(18).take(10).toList();
+                final discoverMore = uniqueAlbums.skip(28).toList();
                 _syncFeaturedSlideshow(featured.length);
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!context.mounted) return;
@@ -226,6 +241,7 @@ class _HomePageState extends State<HomePage> {
                             onProfileTap: () => _openProfile(context),
                             onNotificationsTap: () =>
                                 _openNotifications(context),
+                            onSearchTap: () => _openSearch(context),
                           ),
                         ),
                         SliverToBoxAdapter(
@@ -233,29 +249,39 @@ class _HomePageState extends State<HomePage> {
                         ),
                         SliverList(
                           delegate: SliverChildListDelegate.fixed([
-                            _horizontalSection(
-                              context: context,
-                              title: 'Made for You',
-                              subtitle: 'Curated from your recent favorites',
-                              albums: albums.take(10).toList(),
-                              onSeeAll: () => _openAllAlbums(context),
-                            ),
+                            _browseSectionHeader(),
+                            _buildBrowseAllGrid(),
+                            const SizedBox(height: 10),
+                            _buildFavoriteArtistsRow(),
                             const SizedBox(height: 14),
-                            _horizontalSection(
-                              context: context,
-                              title: 'Popular Right Now',
-                              subtitle: 'Trending picks across your library',
-                              albums: albums.skip(4).take(10).toList(),
-                              onSeeAll: () => _openAllAlbums(context),
-                            ),
-                            const SizedBox(height: 14),
-                            _horizontalSection(
-                              context: context,
-                              title: 'Browse Albums',
-                              subtitle: 'Dive into full collections',
-                              albums: albums,
-                              onSeeAll: () => _openAllAlbums(context),
-                            ),
+                            if (madeForYou.isNotEmpty) ...[
+                              _horizontalSection(
+                                context: context,
+                                title: 'Made for you',
+                                subtitle: 'Albums picked for your next listen',
+                                albums: madeForYou,
+                                onSeeAll: () => _openAllAlbums(context),
+                              ),
+                              const SizedBox(height: 14),
+                            ],
+                            if (trendingNow.isNotEmpty) ...[
+                              _horizontalSection(
+                                context: context,
+                                title: 'Trending now',
+                                subtitle: 'The albums everyone is replaying',
+                                albums: trendingNow,
+                                onSeeAll: () => _openAllAlbums(context),
+                              ),
+                              const SizedBox(height: 14),
+                            ],
+                            if (discoverMore.isNotEmpty)
+                              _horizontalSection(
+                                context: context,
+                                title: 'From your favourite artists',
+                                subtitle: 'More music from the voices you love',
+                                albums: discoverMore,
+                                onSeeAll: () => _openAllAlbums(context),
+                              ),
                           ]),
                         ),
                       ],
@@ -274,6 +300,7 @@ class _HomePageState extends State<HomePage> {
     if (itemCount <= 0) {
       _featuredItemCount = 0;
       _featuredPageIndex = 0;
+      _featuredLoopStartPage = 0;
       _featuredAutoPlayTimer?.cancel();
       _featuredAutoPlayTimer = null;
       return;
@@ -283,10 +310,14 @@ class _HomePageState extends State<HomePage> {
     if (_featuredItemCount != itemCount || controller == null) {
       _featuredItemCount = itemCount;
       _featuredPageIndex = 0;
+      _featuredLoopStartPage = itemCount * 1000;
       _featuredAutoPlayTimer?.cancel();
       _featuredAutoPlayTimer = null;
       _featuredPageController?.dispose();
-      _featuredPageController = PageController(viewportFraction: 0.88);
+      _featuredPageController = PageController(
+        initialPage: _featuredLoopStartPage,
+        viewportFraction: 0.60,
+      );
       _featuredAutoPlayTimer = Timer.periodic(
         const Duration(seconds: 4),
         (_) => _advanceFeaturedSlide(),
@@ -294,7 +325,21 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  List<AlbumSummary> _uniqueAlbums(List<AlbumSummary> albums) {
+    final seen = <String>{};
+    return albums
+        .where((album) {
+          final key =
+              '${album.title.trim().toLowerCase()}::'
+              '${album.artist.trim().toLowerCase()}';
+          return seen.add(key);
+        })
+        .toList(growable: false);
+  }
+
   void _advanceFeaturedSlide() {
+    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) return;
+
     final controller = _featuredPageController;
     if (controller == null ||
         !controller.hasClients ||
@@ -303,11 +348,13 @@ class _HomePageState extends State<HomePage> {
     }
 
     final currentPage = controller.page?.round() ?? _featuredPageIndex;
-    final nextPage = (currentPage + 1) % _featuredItemCount;
+    // The builder is infinite, so advancing is always one page forward. This
+    // avoids the long reverse animation from the last album back to page zero.
+    final nextPage = currentPage + 1;
     controller.animateToPage(
       nextPage,
-      duration: const Duration(milliseconds: 650),
-      curve: Curves.easeInOutCubic,
+      duration: const Duration(milliseconds: 760),
+      curve: Curves.easeInOutQuart,
     );
   }
 
@@ -322,23 +369,54 @@ class _HomePageState extends State<HomePage> {
     return Column(
       children: [
         SizedBox(
-          height: 304,
+          height: 326,
           child: PageView.builder(
             controller: _featuredPageController,
-            padEnds: false,
+            padEnds: true,
             physics: const BouncingScrollPhysics(),
-            itemCount: featured.length,
             onPageChanged: (index) {
               if (!mounted) return;
-              setState(() => _featuredPageIndex = index);
+              setState(() => _featuredPageIndex = index % featured.length);
             },
             itemBuilder: (context, index) {
-              return _staggerReveal(
-                index: index,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
-                  child: _featuredTile(context, featured[index]),
+              return AnimatedBuilder(
+                animation: _featuredPageController!,
+                child: _staggerReveal(
+                  index: index % featured.length,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 26, 8, 24),
+                    child: _featuredTile(
+                      context,
+                      featured[index % featured.length],
+                    ),
+                  ),
                 ),
+                builder: (context, child) {
+                  final controller = _featuredPageController!;
+                  final page = controller.hasClients
+                      ? (controller.page ?? _featuredPageIndex.toDouble())
+                      : _featuredLoopStartPage.toDouble();
+                  final offset = (page - index).clamp(-1.0, 1.0);
+                  final distance = offset.abs();
+
+                  return Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.002)
+                      ..translateByDouble(offset * 32.0, distance * 10.0, 0, 1)
+                      ..rotateY(offset * 0.52)
+                      ..scaleByDouble(
+                        1 - (distance * 0.20),
+                        1 - (distance * 0.20),
+                        1,
+                        1,
+                      ),
+                    child: Opacity(
+                      opacity: 1 - (distance * 0.48),
+                      child: child,
+                    ),
+                  );
+                },
               );
             },
           ),
@@ -346,6 +424,204 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 4),
         _featuredIndicator(featured.length),
       ],
+    );
+  }
+
+  Widget _browseSectionHeader() {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(18, 18, 18, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Explore your mood',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.4,
+            ),
+          ),
+          SizedBox(height: 2),
+          Text(
+            'Choose a vibe and let the music take over',
+            style: TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBrowseAllGrid() {
+    return FutureBuilder<List<Song>>(
+      future: _browseSongsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const SizedBox(
+            height: 180,
+            child: Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+          );
+        }
+
+        if (snapshot.hasError || !snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+
+        final songs = snapshot.data!;
+        final tileWidth = (MediaQuery.sizeOf(context).width - 44) / 2;
+        final tileHeight = tileWidth / 1.05;
+        return SizedBox(
+          height: tileHeight + 20,
+          child: GridView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            primary: false,
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 1,
+              crossAxisSpacing: 0,
+              mainAxisSpacing: 12,
+              childAspectRatio: tileHeight / tileWidth,
+            ),
+            itemCount: 12,
+            itemBuilder: (context, index) => _staggerReveal(
+              index: index,
+              child: BrowseGenreTile(genre: browseGenres[index], songs: songs),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFavoriteArtistsRow() {
+    return FutureBuilder<List<ArtistSummary>>(
+      future: _favoriteArtistsFuture,
+      builder: (context, snapshot) {
+        final artists = snapshot.data ?? const <ArtistSummary>[];
+        if (artists.isEmpty) return const SizedBox.shrink();
+
+        final favourites = artists.take(10).toList(growable: false);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 4),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Your favourite artists',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        Text(
+                          'The artists you play most',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ArtistPage()),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    child: const Text('See all'),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 130,
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: favourites.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 16),
+                itemBuilder: (context, index) =>
+                    _favoriteArtistTile(context, favourites[index]),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _favoriteArtistTile(BuildContext context, ArtistSummary artist) {
+    return _PressScale(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => AlbumPage(artist: artist.name)),
+      ),
+      child: SizedBox(
+        width: 78,
+        child: Column(
+          children: [
+            Container(
+              width: 76,
+              height: 76,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFFA5D5), Color(0xFF8BA8FF)],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.24),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: ClipOval(child: _albumImage(artist.imageUrl)),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              artist.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${artist.songCount} songs',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.58),
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -366,6 +642,7 @@ class _HomePageState extends State<HomePage> {
               child: _HomeHeader(
                 onProfileTap: () => _openProfile(context),
                 onNotificationsTap: () => _openNotifications(context),
+                onSearchTap: () => _openSearch(context),
                 statusLabel: 'Offline mode',
                 statusSubtitle: 'Playing downloaded songs only',
               ),
@@ -547,12 +824,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _modernAlbumTile(BuildContext context, AlbumSummary album) {
-    final isLight = Theme.of(context).brightness == Brightness.light;
     return _PressScale(
       onTap: () => _openAlbum(context, album),
       child: RepaintBoundary(
         child: Container(
           width: 156,
+          height: 212,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
@@ -568,6 +845,27 @@ class _HomePageState extends State<HomePage> {
             child: Stack(
               children: [
                 Positioned.fill(child: _albumImage(album.imageUrl)),
+                Positioned(
+                  left: -22,
+                  top: -30,
+                  child: IgnorePointer(
+                    child: Container(
+                      width: 126,
+                      height: 82,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(90),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.24),
+                            Colors.white.withValues(alpha: 0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 Positioned.fill(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
@@ -592,6 +890,18 @@ class _HomePageState extends State<HomePage> {
                     label: '${album.trackCount}',
                   ),
                 ),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.18),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 Positioned(
                   left: 14,
                   right: 14,
@@ -604,7 +914,7 @@ class _HomePageState extends State<HomePage> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: isLight ? Colors.black : Colors.white,
+                          color: Colors.white,
                           fontSize: 14.5,
                           height: 1.05,
                           fontWeight: FontWeight.w800,
@@ -1124,6 +1434,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _openSearch(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SearchPage()),
+    );
+  }
+
   void _openNotifications(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
@@ -1211,12 +1528,14 @@ class _HomeHeader extends StatelessWidget {
   const _HomeHeader({
     required this.onProfileTap,
     required this.onNotificationsTap,
+    required this.onSearchTap,
     this.statusLabel,
     this.statusSubtitle,
   });
 
   final VoidCallback onProfileTap;
   final VoidCallback onNotificationsTap;
+  final VoidCallback onSearchTap;
   final String? statusLabel;
   final String? statusSubtitle;
 
@@ -1224,111 +1543,165 @@ class _HomeHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final topInset = MediaQuery.of(context).padding.top;
     return Padding(
-      padding: EdgeInsets.fromLTRB(18, topInset + 10, 18, 8),
-      child: Row(
+      padding: EdgeInsets.fromLTRB(18, topInset + 10, 18, 14),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _GreetingText(),
-                SizedBox(height: 4),
-                Text(
-                  statusSubtitle ?? 'Pick up where you left off',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-                if (statusLabel != null) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'WELCOME BACK',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.58),
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
                       ),
                     ),
-                    child: Text(
-                      statusLabel!,
-                      style: const TextStyle(
+                    const SizedBox(height: 1),
+                    Text(
+                      '${_greetingForNow()}  ✦',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.caveat(
                         color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 29,
+                        height: 1.05,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.15,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withValues(alpha: 0.22),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    const SizedBox(height: 3),
+                    Text(
+                      statusSubtitle ?? 'Pick up where you left off',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    if (statusLabel != null) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.16),
+                          ),
+                        ),
+                        child: Text(
+                          statusLabel!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              _IconBubble(
+                icon: Icons.notifications_none_rounded,
+                onTap: onNotificationsTap,
+              ),
+              const SizedBox(width: 10),
+              InkWell(
+                onTap: onProfileTap,
+                borderRadius: BorderRadius.circular(999),
+                child: const CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.white24,
+                  child: Icon(Icons.person_rounded, color: Colors.white),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          _IconBubble(
-            icon: Icons.notifications_none_rounded,
-            onTap: onNotificationsTap,
-          ),
-          const SizedBox(width: 10),
-          InkWell(
-            onTap: onProfileTap,
-            borderRadius: BorderRadius.circular(999),
-            child: const CircleAvatar(
-              radius: 20,
-              backgroundColor: Colors.white24,
-              child: Icon(Icons.person_rounded, color: Colors.white),
-            ),
-          ),
+          const SizedBox(height: 14),
+          _HomeSearchBar(onTap: onSearchTap),
         ],
       ),
     );
   }
-}
-
-class _GreetingText extends StatefulWidget {
-  const _GreetingText();
-
-  @override
-  State<_GreetingText> createState() => _GreetingTextState();
-}
-
-class _GreetingTextState extends State<_GreetingText> {
-  late Timer _refreshTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) {
-        setState(() {});
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _refreshTimer.cancel();
-    super.dispose();
-  }
 
   String _greetingForNow() {
-    final hour = DateTime.now().toLocal().hour;
+    final hour = DateTime.now().hour;
     if (hour >= 5 && hour < 12) return 'Good Morning';
     if (hour >= 12 && hour < 17) return 'Good Afternoon';
     if (hour >= 17 && hour < 22) return 'Good Evening';
     return 'Good Night';
   }
+}
+
+class _HomeSearchBar extends StatelessWidget {
+  const _HomeSearchBar({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      _greetingForNow(),
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 30,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -1,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Material(
+          color: Colors.white.withValues(alpha: 0.12),
+          child: InkWell(
+            onTap: onTap,
+            child: Container(
+              height: 52,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.search_rounded, color: Colors.white),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Text(
+                      'Search songs, artists, albums',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.68),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.tune_rounded,
+                      color: Colors.white70,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

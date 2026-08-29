@@ -117,8 +117,7 @@ class _SongsPageState extends State<SongsPage> {
                               padding: const EdgeInsets.only(bottom: 10),
                               child: _songTile(context, song, songs),
                             );
-                          },
-                        ),
+                          }),
                       ),
                   ],
                 ),

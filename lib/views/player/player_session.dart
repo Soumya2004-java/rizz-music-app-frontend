@@ -374,6 +374,18 @@ class PlayerSession {
     _emit();
   }
 
+  int addSongsToLibrary(Iterable<Song> songs) {
+    var added = 0;
+    for (final song in songs) {
+      final id = song.id.trim();
+      if (id.isEmpty || _likedSongIds.contains(id)) continue;
+      _likedSongIds.add(id);
+      added++;
+    }
+    if (added > 0) _emit();
+    return added;
+  }
+
   void setActiveDevice(String device) {
     if (!_availableDevices.contains(device)) return;
     _activeDevice = device;

@@ -46,87 +46,6 @@ class _SearchPageState extends State<SearchPage> {
     'Focus Mode',
   ];
 
-  final List<Map<String, dynamic>> _genres = const [
-    {
-      'title': 'Desi Pop',
-      'icon': Icons.music_note_rounded,
-      'start': Color(0xFFFF5E73),
-      'end': Color(0xFFFFA657),
-    },
-    {
-      'title': 'Hindi Love',
-      'icon': Icons.favorite_rounded,
-      'start': Color(0xFFFF5D8F),
-      'end': Color(0xFFFF8A5B),
-    },
-    {
-      'title': 'Sad Songs',
-      'icon': Icons.cloud_rounded,
-      'start': Color(0xFF5B6CFF),
-      'end': Color(0xFF8D9BFF),
-    },
-    {
-      'title': 'Punjabi',
-      'icon': Icons.music_video_rounded,
-      'start': Color(0xFFFFB347),
-      'end': Color(0xFFFF6F61),
-    },
-    {
-      'title': 'Bengali',
-      'icon': Icons.palette_rounded,
-      'start': Color(0xFF18A87C),
-      'end': Color(0xFF62DFA8),
-    },
-    {
-      'title': 'Retro',
-      'icon': Icons.graphic_eq_rounded,
-      'start': Color(0xFF5D75FF),
-      'end': Color(0xFF48C6FF),
-    },
-    {
-      'title': 'Indie',
-      'icon': Icons.bolt_rounded,
-      'start': Color(0xFFA45DFF),
-      'end': Color(0xFFFF76C4),
-    },
-    {
-      'title': 'Lo-Fi',
-      'icon': Icons.nights_stay_rounded,
-      'start': Color(0xFF2D9CDB),
-      'end': Color(0xFF56CCF2),
-    },
-    {
-      'title': 'Dance',
-      'icon': Icons.sports_gymnastics_rounded,
-      'start': Color(0xFFFF7A18),
-      'end': Color(0xFFFFB347),
-    },
-    {
-      'title': 'Devotional',
-      'icon': Icons.self_improvement_rounded,
-      'start': Color(0xFF6FCF97),
-      'end': Color(0xFF56CCF2),
-    },
-    {
-      'title': 'Hip Hop',
-      'icon': Icons.headphones_rounded,
-      'start': Color(0xFF3A7BD5),
-      'end': Color(0xFF00D2FF),
-    },
-    {
-      'title': 'Acoustic',
-      'icon': Icons.library_music_rounded,
-      'start': Color(0xFF8E8DFF),
-      'end': Color(0xFFB1A6FF),
-    },
-    {
-      'title': 'Classics',
-      'icon': Icons.album_rounded,
-      'start': Color(0xFFB06AB3),
-      'end': Color(0xFFF9A1BC),
-    },
-  ];
-
   bool get _showSearchResults => _searchController.text.trim().isNotEmpty;
 
   bool _handleScrollNotification(ScrollNotification notification) {
@@ -440,9 +359,11 @@ class _SearchPageState extends State<SearchPage> {
                                       context,
                                       index,
                                     ) {
-                                      final genre = _genres[index];
-                                      return _buildGenreCard(genre, allSongs);
-                                    }, childCount: _genres.length),
+                                      return BrowseGenreTile(
+                                        genre: browseGenres[index],
+                                        songs: allSongs,
+                                      );
+                                    }, childCount: browseGenres.length),
                                   ),
                                 ),
                                 SliverPadding(
@@ -797,75 +718,6 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildGenreCard(Map<String, dynamic> genre, List<Song> allSongs) {
-    final title = genre['title'] as String;
-    final icon = genre['icon'] as IconData;
-    final start = genre['start'] as Color;
-    final end = genre['end'] as Color;
-
-    return GestureDetector(
-      onTap: () => _openGenrePage(
-        title: title,
-        icon: icon,
-        start: start,
-        end: end,
-        songs: allSongs,
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [start, end],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: start.withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: Colors.white, size: 26),
-            const Spacer(),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Text(
-                  'Explore',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  color: Colors.white.withValues(alpha: 0.9),
-                  size: 15,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildRecentSearches() {
     return SizedBox(
       height: 42,
@@ -1042,27 +894,6 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  void _openGenrePage({
-    required String title,
-    required IconData icon,
-    required Color start,
-    required Color end,
-    required List<Song> songs,
-  }) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => _BrowseCategoryPage(
-          title: title,
-          icon: icon,
-          start: start,
-          end: end,
-          songs: songs,
-        ),
-      ),
-    );
-  }
-
   String _normalizeQuery(String value) {
     return value
         .trim()
@@ -1081,6 +912,266 @@ class _SearchPageState extends State<SearchPage> {
   }
 }
 
+class BrowseGenre {
+  const BrowseGenre({
+    required this.title,
+    required this.icon,
+    required this.start,
+    required this.end,
+    required this.imageAsset,
+    this.imageAlignment = Alignment.centerRight,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color start;
+  final Color end;
+  final String imageAsset;
+  final Alignment imageAlignment;
+}
+
+const browseGenres = [
+  BrowseGenre(
+    title: 'Desi Pop',
+    icon: Icons.music_note_rounded,
+    start: Color(0xFFFF5E73),
+    end: Color(0xFFFFA657),
+    imageAsset: 'assets/images/mood_people/desi-pop.png',
+  ),
+  BrowseGenre(
+    title: 'Hindi Love',
+    icon: Icons.favorite_rounded,
+    start: Color(0xFFFF5D8F),
+    end: Color(0xFFFF8A5B),
+    imageAsset: 'assets/images/mood_people/hindi-love.png',
+  ),
+  BrowseGenre(
+    title: 'Sad Songs',
+    icon: Icons.cloud_rounded,
+    start: Color(0xFF5B6CFF),
+    end: Color(0xFF8D9BFF),
+    imageAsset: 'assets/images/mood_people/sad-songs.png',
+  ),
+  BrowseGenre(
+    title: 'Punjabi',
+    icon: Icons.music_video_rounded,
+    start: Color(0xFFFFB347),
+    end: Color(0xFFFF6F61),
+    imageAsset: 'assets/images/mood_people/punjabi.png',
+  ),
+  BrowseGenre(
+    title: 'Bengali',
+    icon: Icons.palette_rounded,
+    start: Color(0xFF18A87C),
+    end: Color(0xFF62DFA8),
+    imageAsset: 'assets/images/mood_people/bengali.png',
+  ),
+  BrowseGenre(
+    title: 'Retro',
+    icon: Icons.graphic_eq_rounded,
+    start: Color(0xFF5D75FF),
+    end: Color(0xFF48C6FF),
+    imageAsset: 'assets/images/mood_people/retro.png',
+  ),
+  BrowseGenre(
+    title: 'Indie',
+    icon: Icons.bolt_rounded,
+    start: Color(0xFFA45DFF),
+    end: Color(0xFFFF76C4),
+    imageAsset: 'assets/images/mood_people/indie.png',
+  ),
+  BrowseGenre(
+    title: 'Lo-Fi',
+    icon: Icons.nights_stay_rounded,
+    start: Color(0xFF2D9CDB),
+    end: Color(0xFF56CCF2),
+    imageAsset: 'assets/images/mood_people/lofi.png',
+  ),
+  BrowseGenre(
+    title: 'Dance',
+    icon: Icons.sports_gymnastics_rounded,
+    start: Color(0xFFFF7A18),
+    end: Color(0xFFFFB347),
+    imageAsset: 'assets/images/mood_people/dance.png',
+  ),
+  BrowseGenre(
+    title: 'Devotional',
+    icon: Icons.self_improvement_rounded,
+    start: Color(0xFF6FCF97),
+    end: Color(0xFF56CCF2),
+    imageAsset: 'assets/images/mood_people/devotional.png',
+  ),
+  BrowseGenre(
+    title: 'Hip Hop',
+    icon: Icons.headphones_rounded,
+    start: Color(0xFF3A7BD5),
+    end: Color(0xFF00D2FF),
+    imageAsset: 'assets/images/mood_people/hip-hop.png',
+  ),
+  BrowseGenre(
+    title: 'Acoustic',
+    icon: Icons.library_music_rounded,
+    start: Color(0xFF8E8DFF),
+    end: Color(0xFFB1A6FF),
+    imageAsset: 'assets/images/mood_people/acoustic.png',
+  ),
+  BrowseGenre(
+    title: 'Classics',
+    icon: Icons.album_rounded,
+    start: Color(0xFFB06AB3),
+    end: Color(0xFFF9A1BC),
+    imageAsset: 'assets/images/mood_people/classics.png',
+  ),
+];
+
+class BrowseGenreTile extends StatelessWidget {
+  const BrowseGenreTile({super.key, required this.genre, required this.songs});
+
+  final BrowseGenre genre;
+  final List<Song> songs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Browse ${genre.title}',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BrowseCategoryPage(
+                  title: genre.title,
+                  icon: genre.icon,
+                  start: genre.start,
+                  end: genre.end,
+                  songs: songs,
+                ),
+              ),
+            ),
+            child: Ink(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: const Color(0xFF121318),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.30),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Positioned.fill(
+                    child: Image.asset(
+                      genre.imageAsset,
+                      fit: BoxFit.cover,
+                      alignment: genre.imageAlignment,
+                      filterQuality: FilterQuality.high,
+                    ),
+                  ),
+                  const Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [
+                            Color(0x66000000),
+                            Color(0x12000000),
+                            Color(0x00000000),
+                          ],
+                          stops: [0, 0.58, 1],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0x00000000),
+                            Color(0x26000000),
+                            Color(0xE6000000),
+                          ],
+                          stops: [0, 0.40, 1],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(13),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.22),
+                            ),
+                          ),
+                          child: Icon(
+                            genre.icon,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          genre.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Text(
+                              'Explore',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.92),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              color: Colors.white.withValues(alpha: 0.9),
+                              size: 15,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _FocusSearchIntent extends Intent {
   const _FocusSearchIntent();
 }
@@ -1089,8 +1180,9 @@ class _ClearSearchIntent extends Intent {
   const _ClearSearchIntent();
 }
 
-class _BrowseCategoryPage extends StatelessWidget {
-  const _BrowseCategoryPage({
+class BrowseCategoryPage extends StatelessWidget {
+  const BrowseCategoryPage({
+    super.key,
     required this.title,
     required this.icon,
     required this.start,
