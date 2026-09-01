@@ -485,8 +485,8 @@ class AlbumPage extends StatelessWidget {
               const SizedBox(width: 10),
               _roundActionButton(
                 icon: Icons.download_rounded,
-                tooltip: 'Download all',
-                onTap: () => _downloadAllSongs(context, songs),
+                tooltip: 'Download album',
+                onTap: () => _downloadAlbum(context, songs),
               ),
             ],
           ),
@@ -525,6 +525,54 @@ class AlbumPage extends StatelessWidget {
     );
   }
 
+  void _addAlbumToLibrary(BuildContext context, List<Song> songs) {
+    if (songs.isEmpty) return;
+    final added = PlayerSession.instance.addSongsToLibrary(songs);
+    final message = added == 0
+        ? 'Already in library'
+        : added == 1
+        ? 'Added 1 song to library'
+        : 'Added $added songs to library';
+    _showAnnouncement(context, message);
+  }
+
+  Future<void> _downloadAlbum(BuildContext context, List<Song> songs) async {
+    final downloadableSongs = songs
+        .where((song) => (song.audioUrl ?? '').trim().isNotEmpty)
+        .toList(growable: false);
+    if (downloadableSongs.isEmpty) {
+      _showAnnouncement(context, 'No downloadable tracks in this album');
+      return;
+    }
+
+    var downloaded = 0;
+    var alreadyDownloaded = 0;
+    for (final song in downloadableSongs) {
+      try {
+        final result = await SongDownloadService.downloadSong(song);
+        if (result.alreadyExists) {
+          alreadyDownloaded++;
+        } else {
+          downloaded++;
+        }
+      } catch (_) {
+        // Continue downloading the remaining tracks when one track fails.
+      }
+    }
+
+    if (!context.mounted) return;
+    if (downloaded == 0 && alreadyDownloaded == downloadableSongs.length) {
+      _showAnnouncement(context, 'Album is already downloaded');
+      return;
+    }
+    _showAnnouncement(
+      context,
+      downloaded == 1
+          ? 'Downloaded 1 track from this album'
+          : 'Downloaded $downloaded tracks from this album',
+    );
+  }
+
   void _showAnnouncement(BuildContext context, String message) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
     ScaffoldMessenger.of(context)
@@ -560,40 +608,6 @@ class AlbumPage extends StatelessWidget {
       if (!context.mounted) return;
       _showAnnouncement(context, 'Failed to download "${song.title}": $error');
     }
-  }
-
-  Future<void> _downloadAllSongs(BuildContext context, List<Song> songs) async {
-    if (songs.isEmpty) return;
-    if (!context.mounted) return;
-    _showAnnouncement(context, 'Downloading ${songs.length} songs...');
-
-    int downloaded = 0;
-    int alreadyExists = 0;
-    int failed = 0;
-
-    for (final song in songs) {
-      final audioUrl = (song.audioUrl ?? '').trim();
-      if (audioUrl.isEmpty) {
-        failed++;
-        continue;
-      }
-      try {
-        final result = await SongDownloadService.downloadSong(song);
-        if (result.alreadyExists) {
-          alreadyExists++;
-        } else {
-          downloaded++;
-        }
-      } catch (_) {
-        failed++;
-      }
-    }
-
-    if (!context.mounted) return;
-    _showAnnouncement(
-      context,
-      'Download all done. New: $downloaded, Existing: $alreadyExists, Failed: $failed',
-    );
   }
 
   void _addToQueue(BuildContext context, Song song, {required bool playNext}) {
@@ -972,9 +986,9 @@ class AlbumPage extends StatelessWidget {
                 width: 44,
                 height: 44,
                 child: _glassIconButton(
-                  icon: Icons.download_rounded,
-                  tooltip: 'Download all',
-                  onTap: () => _downloadAllSongs(context, songs),
+                  icon: Icons.library_add_rounded,
+                  tooltip: 'Add to library',
+                  onTap: () => _addAlbumToLibrary(context, songs),
                 ),
               ),
             ),

@@ -43,6 +43,9 @@ dependencies:
   audio_session: ^0.1.25
   device_info_plus: ^11.2.0
   image_picker: ^1.1.2
+  google_fonts: ^6.3.3
+  webview_flutter: ^4.14.1
+  webview_flutter_wkwebview: ^3.26.1
 
 
   cupertino_icons: ^1.0.8
@@ -79,6 +82,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/artists/
     - assets/images/mood_people/
     - assets/anim/
     - assets/albums/

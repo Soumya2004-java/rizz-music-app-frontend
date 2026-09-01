@@ -52,6 +52,10 @@ class PlayerSession {
       }
       _emit();
     });
+
+    _sequenceStateSub = _audioPlayer.sequenceStateStream.listen((state) {
+      _syncCurrentSongFromAudioQueue(state.currentIndex);
+    });
   }
 
   static final PlayerSession instance = PlayerSession._();
@@ -68,10 +72,12 @@ class PlayerSession {
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<Duration?>? _durationSub;
   StreamSubscription<PlayerState>? _stateSub;
+  StreamSubscription<SequenceState>? _sequenceStateSub;
   StreamSubscription<Set<AudioDevice>>? _devicesSub;
 
   Song? _currentSong;
   final List<Song> _queue = <Song>[];
+  final List<Song> _backgroundQueue = <Song>[];
   final Set<String> _likedSongIds = <String>{};
   final Random _random = Random();
   final List<String> _availableDevices = <String>[];
@@ -89,7 +95,6 @@ class PlayerSession {
   Timer? _ticker;
   bool _isTrackActionInProgress = false;
   int _trackActionToken = 0;
-  String _loadedAudioSourceKey = '';
 
   Song? get currentSong => _currentSong;
   bool get isPlaying => _isPlaying;
@@ -250,22 +255,38 @@ class PlayerSession {
       if (audioUrl.isEmpty) {
         throw StateError('No playable audio source found.');
       }
-      final uri = _audioUriForSong(audioUrl);
-      final nextSourceKey = uri.toString();
       if (actionToken != _trackActionToken) return;
-      if (resetPosition || _loadedAudioSourceKey != nextSourceKey) {
-        await _audioPlayer
-            .setAudioSource(AudioSource.uri(uri, tag: _mediaItemForSong(song)))
-            .timeout(_audioOpTimeout);
-        _loadedAudioSourceKey = nextSourceKey;
+      final queue = _playableBackgroundQueue();
+      final initialIndex = queue.indexWhere(
+        (item) => _songKey(item) == _songKey(song),
+      );
+      if (initialIndex < 0) {
+        throw StateError('Current song is not in the playback queue.');
       }
-      if (actionToken != _trackActionToken) return;
-      if (!resetPosition && _audioPlayer.audioSource == null) {
-        await _audioPlayer
-            .setAudioSource(AudioSource.uri(uri, tag: _mediaItemForSong(song)))
-            .timeout(_audioOpTimeout);
-        _loadedAudioSourceKey = nextSourceKey;
-      }
+
+      _backgroundQueue
+        ..clear()
+        ..addAll(queue);
+      await _audioPlayer
+          .setAudioSources(
+            queue
+                .map(
+                  (item) => AudioSource.uri(
+                    _audioUriForSong(
+                      item.preferredAudioUrl(
+                        dolbyAtmos: _audioSettings.dolbyAtmos,
+                        highResMusic: _audioSettings.highResMusic,
+                      ),
+                    ),
+                    tag: _mediaItemForSong(item),
+                  ),
+                )
+                .toList(growable: false),
+            initialIndex: initialIndex,
+            initialPosition: resetPosition ? Duration.zero : _position,
+          )
+          .timeout(_audioOpTimeout);
+      await _syncAudioPlaylistModes();
       if (actionToken != _trackActionToken) return;
 
       final loadedDuration = _audioPlayer.duration;
@@ -303,6 +324,46 @@ class PlayerSession {
       return Uri.parse(normalized);
     }
     return Uri.file(normalized);
+  }
+
+  List<Song> _playableBackgroundQueue() {
+    return _queue
+        .where((song) => song.hasRemoteAudio)
+        .where(
+          (song) => song
+              .preferredAudioUrl(
+                dolbyAtmos: _audioSettings.dolbyAtmos,
+                highResMusic: _audioSettings.highResMusic,
+              )
+              .trim()
+              .isNotEmpty,
+        )
+        .toList(growable: false);
+  }
+
+  Future<void> _syncAudioPlaylistModes() async {
+    if (_isShuffleEnabled) {
+      await _audioPlayer.shuffle();
+    }
+    await _audioPlayer.setShuffleModeEnabled(_isShuffleEnabled);
+    await _audioPlayer.setLoopMode(switch (_repeatMode) {
+      RepeatMode.off => LoopMode.off,
+      RepeatMode.all => LoopMode.all,
+      RepeatMode.one => LoopMode.one,
+    });
+  }
+
+  void _syncCurrentSongFromAudioQueue(int? index) {
+    if (index == null || index < 0 || index >= _backgroundQueue.length) return;
+
+    final song = _backgroundQueue[index];
+    if (_songKey(song) == _songKey(_currentSong)) return;
+
+    _currentSong = song;
+    _position = _audioPlayer.position;
+    _duration = _audioPlayer.duration ?? _durationForSong(song);
+    _bpm = _bpmForSong(song);
+    _emit();
   }
 
   String _songKey(Song? song) {
@@ -345,6 +406,9 @@ class PlayerSession {
 
   void toggleShuffle() {
     _isShuffleEnabled = !_isShuffleEnabled;
+    if (_currentSong?.hasRemoteAudio ?? false) {
+      unawaited(_syncAudioPlaylistModes());
+    }
     _emit();
   }
 
@@ -360,6 +424,9 @@ class PlayerSession {
         _repeatMode = RepeatMode.off;
         break;
     }
+    if (_currentSong?.hasRemoteAudio ?? false) {
+      unawaited(_syncAudioPlaylistModes());
+    }
     _emit();
   }
 
@@ -372,6 +439,18 @@ class PlayerSession {
       _likedSongIds.add(id);
     }
     _emit();
+  }
+
+  int addSongsToLibrary(Iterable<Song> songs) {
+    var added = 0;
+    for (final song in songs) {
+      final id = song.id.trim();
+      if (id.isEmpty || _likedSongIds.contains(id)) continue;
+      _likedSongIds.add(id);
+      added++;
+    }
+    if (added > 0) _emit();
+    return added;
   }
 
   void setActiveDevice(String device) {
@@ -910,6 +989,7 @@ class PlayerSession {
     await _positionSub?.cancel();
     await _durationSub?.cancel();
     await _stateSub?.cancel();
+    await _sequenceStateSub?.cancel();
     await _devicesSub?.cancel();
     await _audioPlayer.dispose();
     await _controller.close();
