@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="main.dart" type="FlutterRunConfigurationType" factoryName="Flutter" editBeforeRun="true" focusToolWindowBeforeRun="true">
+    <option name="additionalArgs" value="--dart-define=YOUTUBE_API_KEY=AIzaSyAoIz5uMS5GxdfclUnHgMS4yrpaGshI4xA --dart-define=YOUTUBE_API_KEY=AIzaSyBJtOKEVtHi6uo9mCDWcVUhYmVQFiYQPYg" />
+    <option name="filePath" value="$PROJECT_DIR$/lib/main.dart" />
+    <method v="2" />
+  </configuration>
+</component>

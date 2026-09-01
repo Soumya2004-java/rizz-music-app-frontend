@@ -10,6 +10,7 @@ import '../music/music_repository.dart';
 import '../songs/albums/album_page.dart';
 import '../songs/songs.dart';
 import '../services/song_download_service.dart';
+import '../services/youtube_playlist_service.dart';
 import '../views/library pages/download/download_page.dart';
 import '../views/library pages/Albums/albums_page.dart';
 import '../views/library pages/Artsts/artists_page.dart';
@@ -17,8 +18,10 @@ import '../views/profile/profile.dart';
 import '../views/search.dart';
 import '../views/player/player_scrreen.dart';
 import '../views/player/player_session.dart';
+import '../views/youtube_playlist_screen.dart';
 import '../widgets/app_cached_image.dart';
 import '../widgets/app_skeletons.dart';
+import '../widgets/neon_search_frame.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,9 +31,37 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const _featuredArtists = <_CuratedArtist>[
+    _CuratedArtist(
+      name: 'Arijit Singh',
+      portrait: 'assets/images/artists/arijit_singh.png',
+    ),
+    _CuratedArtist(
+      name: 'Diljit Dosanjh',
+      portrait: 'assets/images/artists/diljit_dosanjh.png',
+    ),
+    _CuratedArtist(
+      name: 'Udit Narayan',
+      portrait: 'assets/images/artists/udit_narayan.png',
+    ),
+    _CuratedArtist(
+      name: 'Anuradha Paudwal',
+      portrait: 'assets/images/artists/anuradha_paudwal.png',
+    ),
+    _CuratedArtist(
+      name: 'Shreya Ghoshal',
+      portrait: 'assets/images/artists/shreya_ghoshal.png',
+    ),
+    _CuratedArtist(
+      name: 'Kumar Sanu',
+      portrait: 'assets/images/artists/kumar_sanu.png',
+    ),
+  ];
+
   late Future<_HomeData> _homeFuture;
   late Future<List<Song>> _browseSongsFuture;
   late Future<List<ArtistSummary>> _favoriteArtistsFuture;
+  late Future<List<YouTubePlaylistItem>> _youtubePlaylistFuture;
   PageController? _featuredPageController;
   Timer? _featuredAutoPlayTimer;
   int _featuredPageIndex = 0;
@@ -44,6 +75,9 @@ class _HomePageState extends State<HomePage> {
     _homeFuture = _loadHomeData();
     _browseSongsFuture = MusicRepository.fetchSongs();
     _favoriteArtistsFuture = MusicRepository.fetchArtists();
+    _youtubePlaylistFuture = YouTubePlaylistService.fetchAll(
+      YouTubePlaylistService.playlistId,
+    );
   }
 
   Future<void> _refresh() async {
@@ -51,6 +85,9 @@ class _HomePageState extends State<HomePage> {
       _homeFuture = _loadHomeData(forceRefresh: true);
       _browseSongsFuture = MusicRepository.fetchSongs();
       _favoriteArtistsFuture = MusicRepository.fetchArtists();
+      _youtubePlaylistFuture = YouTubePlaylistService.fetchAll(
+        YouTubePlaylistService.playlistId,
+      );
     });
     await _homeFuture;
   }
@@ -73,8 +110,25 @@ class _HomePageState extends State<HomePage> {
       return _HomeData.offline(downloads);
     }
 
-    final albums = await MusicRepository.fetchAlbums();
+    final albums = (await MusicRepository.fetchAlbums())
+        .where(_hasKnownAlbumTitle)
+        .toList(growable: false);
     return _HomeData.online(albums);
+  }
+
+  bool _hasKnownAlbumTitle(AlbumSummary album) {
+    final title = album.title.trim().toLowerCase();
+    final normalized = title.replaceAll(RegExp(r'[^a-z0-9]'), '');
+    return normalized.isNotEmpty &&
+        !const {
+          'unknown',
+          'unknownalbum',
+          'untitled',
+          'untitledalbum',
+          'na',
+          'none',
+          'notavailable',
+        }.contains(normalized);
   }
 
   Future<bool> _hasInternetConnection() async {
@@ -241,6 +295,10 @@ class _HomePageState extends State<HomePage> {
                             _browseSectionHeader(),
                             _buildBrowseAllGrid(),
                             const SizedBox(height: 10),
+                            _youtubePlaylistEntry(context),
+                            const SizedBox(height: 14),
+                            _youtubePlaylistSongs(context),
+                            const SizedBox(height: 14),
                             _buildFavoriteArtistsRow(),
                             const SizedBox(height: 14),
                             if (madeForYou.isNotEmpty) ...[
@@ -485,14 +543,216 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _youtubePlaylistEntry(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: _PressScale(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const YouTubePlaylistScreen()),
+        ),
+        child: Container(
+          height: 96,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF2B0A10), Color(0xFF10090E)],
+            ),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: 18),
+              Container(
+                width: 54,
+                height: 54,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFF0033),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Your YouTube playlist',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Watch and play your saved mix',
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white70),
+              const SizedBox(width: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _youtubePlaylistSongs(BuildContext context) {
+    return FutureBuilder<List<YouTubePlaylistItem>>(
+      future: _youtubePlaylistFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: CircularProgressIndicator(color: Color(0xFFFF0033)),
+            ),
+          );
+        }
+
+        final tracks = snapshot.data ?? const <YouTubePlaylistItem>[];
+        if (tracks.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Your playlist songs',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${tracks.length} songs from YouTube',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 8),
+              ListView.separated(
+                shrinkWrap: true,
+                primary: false,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: tracks.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final track = tracks[index];
+                  return Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const YouTubePlaylistScreen(),
+                        ),
+                      ),
+                      child: Ink(
+                        height: 72,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.14),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(9),
+                              child: SizedBox(
+                                width: 74,
+                                height: 48,
+                                child: track.thumbnailUrl.isEmpty
+                                    ? const ColoredBox(color: Colors.white12)
+                                    : Image.network(
+                                        track.thumbnailUrl,
+                                        fit: BoxFit.cover,
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    track.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    track.channelTitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white60,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.play_circle_fill_rounded,
+                              color: Color(0xFFFF0033),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildFavoriteArtistsRow() {
     return FutureBuilder<List<ArtistSummary>>(
       future: _favoriteArtistsFuture,
       builder: (context, snapshot) {
-        final artists = snapshot.data ?? const <ArtistSummary>[];
-        if (artists.isEmpty) return const SizedBox.shrink();
-
-        final favourites = artists.take(10).toList(growable: false);
+        final artistsByName = <String, ArtistSummary>{
+          for (final artist in snapshot.data ?? const <ArtistSummary>[])
+            artist.name.trim().toLowerCase(): artist,
+        };
+        final favourites = _featuredArtists
+            .map(
+              (artist) => ArtistSummary(
+                name: artist.name,
+                imageUrl: artist.portrait,
+                songCount:
+                    artistsByName[artist.name.toLowerCase()]?.songCount ?? 0,
+              ),
+            )
+            .toList(growable: false);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -514,7 +774,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         Text(
-                          'The artists you play most',
+                          'Voices you love, all in one place',
                           style: TextStyle(color: Colors.white70, fontSize: 12),
                         ),
                       ],
@@ -598,16 +858,18 @@ class _HomePageState extends State<HomePage> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              '${artist.songCount} songs',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.58),
-                fontSize: 11,
+            if (artist.songCount > 0) ...[
+              const SizedBox(height: 2),
+              Text(
+                '${artist.songCount} songs',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.58),
+                  fontSize: 11,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -1520,6 +1782,13 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+class _CuratedArtist {
+  const _CuratedArtist({required this.name, required this.portrait});
+
+  final String name;
+  final String portrait;
+}
+
 class _HomeData {
   const _HomeData._({
     required this.isOffline,
@@ -1669,51 +1938,42 @@ class _HomeSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Material(
-          color: Colors.white.withValues(alpha: 0.12),
-          child: InkWell(
-            onTap: onTap,
-            child: Container(
-              height: 52,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.search_rounded, color: Colors.white),
-                  const SizedBox(width: 11),
-                  Expanded(
-                    child: Text(
-                      'Search songs, artists, albums',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.68),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+    return NeonSearchFrame(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16.5),
+          child: Row(
+            children: [
+              const Icon(Icons.search_rounded, color: Colors.white),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Text(
+                  'Search songs, artists, albums',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.68),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
                   ),
-                  Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.tune_rounded,
-                      color: Colors.white70,
-                      size: 18,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.tune_rounded,
+                  color: Colors.white70,
+                  size: 18,
+                ),
+              ),
+            ],
           ),
         ),
       ),

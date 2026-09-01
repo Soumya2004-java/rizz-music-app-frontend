@@ -18,6 +18,24 @@ class ArtistPage extends StatefulWidget {
 }
 
 class _ArtistPageState extends State<ArtistPage> {
+  static const _featuredArtists = <_CuratedArtist>[
+    _CuratedArtist('Arijit Singh', 'assets/images/artists/arijit_singh.png'),
+    _CuratedArtist(
+      'Diljit Dosanjh',
+      'assets/images/artists/diljit_dosanjh.png',
+    ),
+    _CuratedArtist('Udit Narayan', 'assets/images/artists/udit_narayan.png'),
+    _CuratedArtist(
+      'Anuradha Paudwal',
+      'assets/images/artists/anuradha_paudwal.png',
+    ),
+    _CuratedArtist(
+      'Shreya Ghoshal',
+      'assets/images/artists/shreya_ghoshal.png',
+    ),
+    _CuratedArtist('Kumar Sanu', 'assets/images/artists/kumar_sanu.png'),
+  ];
+
   late Future<List<ArtistSummary>> _artistsFuture;
 
   @override
@@ -74,7 +92,28 @@ class _ArtistPageState extends State<ArtistPage> {
                 );
               }
 
-              final artists = snapshot.data ?? const <ArtistSummary>[];
+              final libraryArtists = snapshot.data ?? const <ArtistSummary>[];
+              final artistsByName = <String, ArtistSummary>{
+                for (final artist in libraryArtists)
+                  artist.name.trim().toLowerCase(): artist,
+              };
+              final artists = [
+                for (final artist in _featuredArtists)
+                  ArtistSummary(
+                    name: artist.name,
+                    imageUrl: artist.portrait,
+                    songCount:
+                        artistsByName[artist.name.toLowerCase()]?.songCount ??
+                        0,
+                  ),
+                ...libraryArtists.where(
+                  (artist) => !_featuredArtists.any(
+                    (featured) =>
+                        featured.name.toLowerCase() ==
+                        artist.name.trim().toLowerCase(),
+                  ),
+                ),
+              ];
 
               return RefreshIndicator(
                 onRefresh: _refresh,
@@ -162,6 +201,12 @@ class _ArtistPageState extends State<ArtistPage> {
                       aspectRatio: 1,
                       child: artist.imageUrl.startsWith('http')
                           ? AppCachedImage(url: artist.imageUrl)
+                          : artist.imageUrl.startsWith('assets/')
+                          ? Image.asset(
+                              artist.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _fallback(),
+                            )
                           : _fallback(),
                     ),
                   ),
@@ -195,4 +240,11 @@ class _ArtistPageState extends State<ArtistPage> {
       child: const Icon(Icons.person_rounded, color: Colors.white),
     );
   }
+}
+
+class _CuratedArtist {
+  const _CuratedArtist(this.name, this.portrait);
+
+  final String name;
+  final String portrait;
 }

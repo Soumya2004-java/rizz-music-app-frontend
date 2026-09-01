@@ -12,6 +12,7 @@ import '../views/player/player_scrreen.dart';
 import '../views/player/player_session.dart';
 import '../widgets/app_cached_image.dart';
 import '../widgets/app_skeletons.dart';
+import '../widgets/neon_search_frame.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -479,73 +480,50 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Widget _buildSearchBar() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-        child: Container(
-          height: 58,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.white.withValues(alpha: 0.18),
-                Colors.white.withValues(alpha: 0.09),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.18),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.search, color: Colors.white.withValues(alpha: 0.82)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  autofocus: false,
-                  onSubmitted: _onSubmit,
-                  onTapOutside: (_) => _searchFocusNode.unfocus(),
-                  textInputAction: TextInputAction.search,
-                  style: const TextStyle(color: Colors.white, fontSize: 16),
-                  cursorColor: Colors.white,
-                  decoration: InputDecoration(
-                    hintText: 'Try "Arijit", "Lo-Fi", "Retro"...',
-                    hintStyle: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.62),
-                    ),
-                    border: InputBorder.none,
-                  ),
+    return NeonSearchFrame(
+      height: 58,
+      active: _searchFocusNode.hasFocus,
+      child: Row(
+        children: [
+          Icon(Icons.search, color: Colors.white.withValues(alpha: 0.82)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              autofocus: false,
+              onSubmitted: _onSubmit,
+              onTapOutside: (_) => _searchFocusNode.unfocus(),
+              textInputAction: TextInputAction.search,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              cursorColor: Colors.white,
+              decoration: InputDecoration(
+                hintText: 'Try "Arijit", "Lo-Fi", "Retro"...',
+                hintStyle: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.62),
                 ),
+                border: InputBorder.none,
               ),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 170),
-                child: _searchController.text.isEmpty
-                    ? const SizedBox.shrink()
-                    : IconButton(
-                        key: const ValueKey('clear_btn'),
-                        onPressed: () {
-                          _searchController.clear();
-                          _focusSearchField();
-                        },
-                        icon: Icon(
-                          Icons.close_rounded,
-                          size: 18,
-                          color: Colors.white.withValues(alpha: 0.82),
-                        ),
-                      ),
-              ),
-            ],
+            ),
           ),
-        ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 170),
+            child: _searchController.text.isEmpty
+                ? const SizedBox.shrink()
+                : IconButton(
+                    key: const ValueKey('clear_btn'),
+                    onPressed: () {
+                      _searchController.clear();
+                      _focusSearchField();
+                    },
+                    icon: Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: Colors.white.withValues(alpha: 0.82),
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }
