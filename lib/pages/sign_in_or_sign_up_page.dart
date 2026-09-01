@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../widgets/rizz_auth_ui.dart';
 
@@ -68,20 +69,20 @@ class _SignInOrSignUpState extends State<SignInOrSignUp>
                     const Spacer(flex: 2),
                     Text(
                       'Your sound.\nYour space.',
-                      style: TextStyle(
+                      style: GoogleFonts.spaceGrotesk(
                         color: Colors.white,
                         fontSize: MediaQuery.sizeOf(context).width < 370
                             ? 42
                             : 48,
                         height: 0.96,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -2.1,
+                        letterSpacing: -2.6,
                       ),
                     ),
                     const SizedBox(height: 15),
                     Text(
                       'Discover music that feels like it was made for you.',
-                      style: TextStyle(
+                      style: GoogleFonts.manrope(
                         color: Colors.white.withValues(alpha: 0.66),
                         fontSize: 16,
                         height: 1.45,
@@ -103,7 +104,7 @@ class _SignInOrSignUpState extends State<SignInOrSignUp>
                               const SizedBox(width: 9),
                               Text(
                                 'LISTEN YOUR WAY',
-                                style: TextStyle(
+                                style: GoogleFonts.spaceGrotesk(
                                   color: Colors.white.withValues(alpha: 0.62),
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
@@ -135,9 +136,11 @@ class _SignInOrSignUpState extends State<SignInOrSignUp>
                                   borderRadius: BorderRadius.circular(18),
                                 ),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'I already have an account',
-                                style: TextStyle(fontWeight: FontWeight.w700),
+                                style: GoogleFonts.manrope(
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ),
@@ -149,7 +152,7 @@ class _SignInOrSignUpState extends State<SignInOrSignUp>
                       child: Text(
                         'By continuing, you agree to our Terms and Privacy Policy.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: GoogleFonts.manrope(
                           color: Colors.white.withValues(alpha: 0.38),
                           fontSize: 11,
                           fontWeight: FontWeight.w500,

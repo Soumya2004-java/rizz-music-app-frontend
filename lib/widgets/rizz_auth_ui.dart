@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class RizzAuthScaffold extends StatelessWidget {
   const RizzAuthScaffold({
@@ -74,11 +75,11 @@ class RizzBrandMark extends StatelessWidget {
         const SizedBox(width: 11),
         Text(
           'RizzMusic',
-          style: TextStyle(
+          style: GoogleFonts.spaceGrotesk(
             color: Colors.white,
             fontSize: compact ? 18 : 22,
             fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
+            letterSpacing: -0.8,
           ),
         ),
       ],
@@ -138,12 +139,18 @@ class RizzInput extends StatelessWidget {
     return TextField(
       controller: controller,
       obscureText: obscure,
-      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      style: GoogleFonts.manrope(
+        color: Colors.white,
+        fontWeight: FontWeight.w600,
+      ),
       cursorColor: const Color(0xFFB6C4FF),
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: const Color(0xFFB6C4FF), size: 20),
         hintText: hint,
-        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.38)),
+        hintStyle: GoogleFonts.manrope(
+          color: Colors.white.withValues(alpha: 0.38),
+          fontWeight: FontWeight.w500,
+        ),
         filled: true,
         fillColor: Colors.black.withValues(alpha: 0.22),
         contentPadding: const EdgeInsets.symmetric(vertical: 17),
@@ -215,10 +222,11 @@ class RizzPrimaryButton extends StatelessWidget {
                       children: [
                         Text(
                           label,
-                          style: const TextStyle(
+                          style: GoogleFonts.spaceGrotesk(
                             color: Color(0xFF10162B),
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
                           ),
                         ),
                         if (icon != null) ...[

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../background/gradient_mesh_background.dart';
 import '../../services/auth_store.dart';
 import '../library pages/songs/songs_page.dart';
 import 'settings/edit profile /edit_profile.dart';
@@ -30,23 +29,18 @@ class _ProfilePageState extends State<ProfilePage> {
         : Colors.white.withValues(alpha: 0.10);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: const Color(0xFF07090F),
       body: Stack(
         children: [
-          const GradientMeshBackground(),
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.20),
-                    Colors.black.withValues(alpha: 0.42),
-                  ],
-                ),
-              ),
-            ),
+          Positioned(
+            top: -150,
+            left: -130,
+            child: _ambientGlow(320, const Color(0xFF596FEA), 0.16),
+          ),
+          Positioned(
+            top: 300,
+            right: -170,
+            child: _ambientGlow(320, const Color(0xFFFF876C), 0.09),
           ),
           ValueListenableBuilder<ProfileData>(
             valueListenable: ProfileStore.profile,
@@ -63,12 +57,43 @@ class _ProfilePageState extends State<ProfilePage> {
                     parent: AlwaysScrollableScrollPhysics(),
                   ),
                   padding: EdgeInsets.fromLTRB(
-                    16,
-                    MediaQuery.of(context).padding.top + 16,
-                    16,
+                    20,
+                    MediaQuery.of(context).padding.top + 18,
+                    20,
                     120,
                   ),
                   children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Profile',
+                            style: TextStyle(
+                              color: primaryText,
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -1.2,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Settings',
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const SettingsPage(),
+                            ),
+                          ),
+                          style: IconButton.styleFrom(
+                            foregroundColor: primaryText,
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.08,
+                            ),
+                          ),
+                          icon: const Icon(Icons.settings_outlined),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
                     _heroCard(
                       profile: profile,
                       primaryText: primaryText,
@@ -84,7 +109,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 12),
                     _panel(
-                      title: 'About',
+                      title: 'Your vibe',
                       primaryText: primaryText,
                       secondaryText: secondaryText,
                       cardSurface: cardSurface,
@@ -185,15 +210,55 @@ class _ProfilePageState extends State<ProfilePage> {
     required Color cardSurface,
   }) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardSurface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+        borderRadius: BorderRadius.circular(28),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF262D49).withValues(alpha: 0.92),
+            const Color(0xFF171B29).withValues(alpha: 0.88),
+          ],
+        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.22),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          _avatar(profile),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              _avatar(profile),
+              Positioned(
+                right: -2,
+                bottom: -2,
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF9CAEFF),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF1B2032),
+                      width: 3,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.edit_rounded,
+                    size: 12,
+                    color: Color(0xFF10162B),
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -214,15 +279,15 @@ class _ProfilePageState extends State<ProfilePage> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(12),
+                    color: const Color(0xFFB6C4FF).withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     profile.membership,
@@ -298,16 +363,23 @@ class _ProfilePageState extends State<ProfilePage> {
     required Color cardSurface,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: cardSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        color: const Color(0xFF151927).withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: primaryText, size: 18),
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: const Color(0xFF9CAEFF).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, color: const Color(0xFFB6C4FF), size: 17),
+          ),
           const SizedBox(height: 8),
           Text(
             label,
@@ -343,9 +415,9 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: cardSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        color: const Color(0xFF151927).withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,9 +472,9 @@ class _ProfilePageState extends State<ProfilePage> {
       style: ElevatedButton.styleFrom(
         elevation: 0,
         minimumSize: const Size.fromHeight(48),
-        backgroundColor: const Color(0xFFFF6F61),
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        backgroundColor: const Color(0xFF9CAEFF),
+        foregroundColor: const Color(0xFF10162B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }
@@ -419,8 +491,8 @@ class _ProfilePageState extends State<ProfilePage> {
       label: Text(title, style: TextStyle(color: primaryText)),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(48),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }
@@ -436,9 +508,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: cardSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        color: const Color(0xFF151927).withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
       ),
       child: ListTile(
         onTap: onTap,
@@ -498,5 +570,23 @@ class _ProfilePageState extends State<ProfilePage> {
     final normalized = name.trim();
     if (normalized.isEmpty) return 'U';
     return normalized[0].toUpperCase();
+  }
+
+  Widget _ambientGlow(double size, Color color, double opacity) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [
+              color.withValues(alpha: opacity),
+              Colors.transparent,
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

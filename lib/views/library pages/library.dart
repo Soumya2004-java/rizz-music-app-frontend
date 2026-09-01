@@ -6,7 +6,6 @@ import 'package:rizzmusicapp/views/library%20pages/Artsts/artists_page.dart';
 import 'package:rizzmusicapp/views/library%20pages/Playlists/playlist_page.dart';
 import 'package:rizzmusicapp/views/library%20pages/songs/songs_page.dart';
 
-import '../../background/gradient_mesh_background.dart';
 import '../../music/music_repository.dart';
 import '../../songs/songs.dart';
 import '../../widgets/app_skeletons.dart';
@@ -69,23 +68,18 @@ class _LibraryPageState extends State<LibraryPage> {
     final secondaryText = isLight ? const Color(0xFF7A7F87) : Colors.white70;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: const Color(0xFF07090F),
       body: Stack(
         children: [
-          const GradientMeshBackground(),
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.14),
-                    Colors.black.withValues(alpha: 0.42),
-                  ],
-                ),
-              ),
-            ),
+          Positioned(
+            top: -170,
+            right: -120,
+            child: _ambientGlow(330, const Color(0xFF596FEA), 0.18),
+          ),
+          Positioned(
+            top: 240,
+            left: -160,
+            child: _ambientGlow(310, const Color(0xFFFF876C), 0.10),
           ),
           SafeArea(
             child: FutureBuilder<LibraryStats>(
@@ -122,20 +116,90 @@ class _LibraryPageState extends State<LibraryPage> {
                     physics: const BouncingScrollPhysics(
                       parent: AlwaysScrollableScrollPhysics(),
                     ),
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 116),
                     children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Your Library',
+                              style: TextStyle(
+                                color: primaryText,
+                                fontSize: 34,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -1.2,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Refresh library',
+                            onPressed: _refresh,
+                            style: IconButton.styleFrom(
+                              foregroundColor: primaryText,
+                              backgroundColor: Colors.white.withValues(
+                                alpha: 0.08,
+                              ),
+                            ),
+                            icon: const Icon(Icons.refresh_rounded),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
                       Text(
-                        'Library',
+                        'Everything you love, all in one place.',
                         style: TextStyle(
-                          color: primaryText,
-                          fontSize: 34,
-                          fontWeight: FontWeight.w700,
+                          color: secondaryText,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 22),
                       _glassPanel(
+                        padding: const EdgeInsets.all(18),
                         child: Column(
                           children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(13),
+                                    color: const Color(0xFF9CAEFF),
+                                  ),
+                                  child: const Icon(
+                                    Icons.auto_awesome_rounded,
+                                    color: Color(0xFF10162B),
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 11),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Your collection',
+                                        style: TextStyle(
+                                          color: primaryText,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Saved music at a glance',
+                                        style: TextStyle(
+                                          color: secondaryText,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
@@ -186,7 +250,16 @@ class _LibraryPageState extends State<LibraryPage> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 18),
+                      Text(
+                        'Browse your music',
+                        style: TextStyle(
+                          color: primaryText,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
                       _glassPanel(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
@@ -280,7 +353,7 @@ class _LibraryPageState extends State<LibraryPage> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 18),
                       _glassPanel(
                         child: FutureBuilder<List<Song>>(
                           future: _likedSongsFuture,
@@ -312,7 +385,7 @@ class _LibraryPageState extends State<LibraryPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Liked Songs',
+                                  'Your liked songs',
                                   style: TextStyle(
                                     color: primaryText,
                                     fontSize: 16,
@@ -376,15 +449,15 @@ class _LibraryPageState extends State<LibraryPage> {
     EdgeInsetsGeometry padding = const EdgeInsets.all(16),
   }) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(24),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-            borderRadius: BorderRadius.circular(18),
+            color: const Color(0xFF151927).withValues(alpha: 0.82),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.11)),
+            borderRadius: BorderRadius.circular(24),
           ),
           child: child,
         ),
@@ -402,14 +475,21 @@ class _LibraryPageState extends State<LibraryPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: Colors.white.withValues(alpha: 0.08),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+        borderRadius: BorderRadius.circular(17),
+        color: Colors.black.withValues(alpha: 0.18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: secondaryText, size: 18),
-          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: const Color(0xFF9CAEFF).withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, color: const Color(0xFFB6C4FF), size: 17),
+          ),
+          const SizedBox(width: 9),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -417,7 +497,8 @@ class _LibraryPageState extends State<LibraryPage> {
                 value,
                 style: TextStyle(
                   color: primaryText,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
                 ),
               ),
               Text(label, style: TextStyle(color: secondaryText, fontSize: 12)),
@@ -437,14 +518,22 @@ class _LibraryPageState extends State<LibraryPage> {
     required VoidCallback onTap,
   }) {
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         child: Row(
           children: [
-            Icon(icon, color: primaryText),
-            const SizedBox(width: 10),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFF9CAEFF).withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Icon(icon, color: const Color(0xFFB6C4FF), size: 20),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -538,6 +627,24 @@ class _LibraryPageState extends State<LibraryPage> {
     return Container(
       color: Colors.white.withValues(alpha: 0.12),
       child: Icon(Icons.music_note_rounded, color: secondaryText),
+    );
+  }
+
+  Widget _ambientGlow(double size, Color color, double opacity) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [
+              color.withValues(alpha: opacity),
+              Colors.transparent,
+            ],
+          ),
+        ),
+      ),
     );
   }
 
