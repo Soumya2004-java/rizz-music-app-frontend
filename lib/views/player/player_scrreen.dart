@@ -25,12 +25,22 @@ class PlayerScreen extends StatefulWidget {
 
 class _PlayerScreenState extends State<PlayerScreen>
     with TickerProviderStateMixin {
+  static const _fallbackLiquidColors = [
+    Color(0xFF515862),
+    Color(0xFF8C3844),
+    Color(0xFFD1C6AF),
+  ];
+
   final PlayerSession _session = PlayerSession.instance;
   late final AnimationController _discController;
-  late final AnimationController _vibeController;
+  late final AnimationController _liquidBackgroundController;
   StreamSubscription<PlayerSnapshot>? _sessionSub;
   bool _isDownloading = false;
   double? _pendingSeekMs;
+  List<Color> _liquidColors = _fallbackLiquidColors;
+  List<Color> _previousLiquidColors = _fallbackLiquidColors;
+  String? _paletteArtworkKey;
+  int _paletteRequest = 0;
 
   @override
   void initState() {
@@ -48,17 +58,19 @@ class _PlayerScreenState extends State<PlayerScreen>
       vsync: this,
       duration: const Duration(seconds: 14),
     );
-    _vibeController = AnimationController(
+    _liquidBackgroundController = AnimationController(
       vsync: this,
-      duration: _pulseDurationForBpm(_session.bpm),
+      duration: const Duration(seconds: 26),
     );
 
     _sessionSub = _session.stream.listen((_) {
       if (!mounted) return;
+      _updateLiquidPalette(_songArtwork(_session.currentSong ?? widget.song));
       _syncPlaybackAnimations();
       setState(() {});
     });
 
+    _updateLiquidPalette(_songArtwork(_session.currentSong ?? widget.song));
     _syncPlaybackAnimations();
   }
 
@@ -66,20 +78,13 @@ class _PlayerScreenState extends State<PlayerScreen>
   void dispose() {
     _sessionSub?.cancel();
     _discController.dispose();
-    _vibeController.dispose();
+    _liquidBackgroundController.dispose();
     super.dispose();
-  }
-
-  Duration _pulseDurationForBpm(double bpm) {
-    final clampedBpm = bpm.clamp(72.0, 168.0);
-    final beatMs = (60000 / clampedBpm).round();
-    final pulseMs = (beatMs * 2).clamp(700, 1900).toInt();
-    return Duration(milliseconds: pulseMs);
   }
 
   void _syncPlaybackAnimations() {
     _syncDiscRotation();
-    _syncVibePulse();
+    _syncLiquidBackground();
   }
 
   void _syncDiscRotation() {
@@ -94,22 +99,58 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
-  void _syncVibePulse() {
-    final targetDuration = _pulseDurationForBpm(_session.bpm);
-    if (_vibeController.duration != targetDuration) {
-      _vibeController.duration = targetDuration;
-    }
-
+  void _syncLiquidBackground() {
     if (_session.isPlaying) {
-      if (!_vibeController.isAnimating) {
-        _vibeController.repeat(min: _vibeController.value);
+      if (!_liquidBackgroundController.isAnimating) {
+        _liquidBackgroundController.repeat(
+          min: _liquidBackgroundController.value,
+        );
+      }
+      return;
+    }
+    if (_liquidBackgroundController.isAnimating) {
+      _liquidBackgroundController.stop(canceled: false);
+    }
+  }
+
+  Future<void> _updateLiquidPalette(ImageProvider<Object>? artwork) async {
+    final artworkKey = _activeSongForControls()?.imageUrl ?? '';
+    if (_paletteArtworkKey == artworkKey) return;
+    _paletteArtworkKey = artworkKey;
+    final request = ++_paletteRequest;
+
+    if (artwork == null) {
+      if (mounted) {
+        _setLiquidColors(_fallbackLiquidColors);
       }
       return;
     }
 
-    if (_vibeController.isAnimating) {
-      _vibeController.stop(canceled: false);
+    try {
+      final scheme = await ColorScheme.fromImageProvider(
+        provider: artwork,
+        brightness: Brightness.dark,
+      );
+      if (!mounted || request != _paletteRequest) return;
+      _setLiquidColors([scheme.primary, scheme.secondary, scheme.tertiary]);
+    } catch (_) {
+      if (!mounted || request != _paletteRequest) return;
+      _setLiquidColors(_fallbackLiquidColors);
     }
+  }
+
+  void _setLiquidColors(List<Color> colors) {
+    if (colors.length == _liquidColors.length &&
+        List.generate(
+          colors.length,
+          (index) => index,
+        ).every((index) => colors[index] == _liquidColors[index])) {
+      return;
+    }
+    setState(() {
+      _previousLiquidColors = _liquidColors;
+      _liquidColors = colors;
+    });
   }
 
   void _minimizePlayer() {
@@ -1038,39 +1079,12 @@ class _PlayerScreenState extends State<PlayerScreen>
         body: Stack(
           children: [
             Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  image: artwork == null
-                      ? null
-                      : DecorationImage(image: artwork, fit: BoxFit.cover),
+              child: IgnorePointer(
+                child: _FloatingWaterBackground(
+                  animation: _liquidBackgroundController,
+                  colors: _liquidColors,
+                  previousColors: _previousLiquidColors,
                 ),
-              ),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    if (isLight) ...[
-                      Colors.transparent,
-                      Colors.transparent,
-                      Colors.transparent,
-                    ] else ...[
-                      const Color(0x66000000),
-                      const Color(0x9911141A),
-                      const Color(0xF213141B),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
-              child: Container(
-                color: isLight
-                    ? Colors.grey.withValues(alpha: 0.24)
-                    : Colors.black.withValues(alpha: 0.18),
               ),
             ),
             SafeArea(
@@ -1555,6 +1569,258 @@ class _PlayerScreenState extends State<PlayerScreen>
       ),
     );
   }
+}
+
+/// A clean, full-screen color wash that uses the active album's palette without
+/// repeating its image or texture in the player backdrop.
+class _FloatingWaterBackground extends StatelessWidget {
+  const _FloatingWaterBackground({
+    required this.animation,
+    required this.colors,
+    required this.previousColors,
+  });
+
+  final Animation<double> animation;
+  final List<Color> colors;
+  final List<Color> previousColors;
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: TweenAnimationBuilder<double>(
+        key: ValueKey(colors.map((color) => color.toARGB32()).join('-')),
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeOutCubic,
+        tween: Tween(begin: 0, end: 1),
+        builder: (context, paletteProgress, _) {
+          final blendedColors = List<Color>.generate(
+            colors.length,
+            (index) => Color.lerp(
+              previousColors[index],
+              colors[index],
+              paletteProgress,
+            )!,
+          );
+
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, _) {
+              final t = animation.value * math.pi * 2;
+              final baseStart = Color.lerp(
+                blendedColors[0],
+                Colors.black,
+                0.76,
+              )!;
+              final baseEnd = Color.lerp(blendedColors[1], Colors.black, 0.84)!;
+
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [baseStart, baseEnd],
+                      ),
+                    ),
+                  ),
+                  CustomPaint(
+                    painter: _LiquidBlobPainter(
+                      colors: blendedColors,
+                      phase: t,
+                    ),
+                  ),
+                  CustomPaint(
+                    painter: _SilkRibbonPainter(
+                      colors: blendedColors,
+                      progress: animation.value,
+                    ),
+                  ),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.24),
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.34),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _LiquidBlobPainter extends CustomPainter {
+  const _LiquidBlobPainter({required this.colors, required this.phase});
+
+  final List<Color> colors;
+  final double phase;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    _paintBlob(
+      canvas,
+      size,
+      color: colors[0],
+      center: Offset(
+        size.width * (0.15 + math.sin(phase) * 0.11),
+        size.height * (0.20 + math.cos(phase * 0.8) * 0.08),
+      ),
+      radius: size.width * 0.59,
+    );
+    _paintBlob(
+      canvas,
+      size,
+      color: colors[1],
+      center: Offset(
+        size.width * (0.80 + math.cos(phase * 0.9) * 0.12),
+        size.height * (0.70 + math.sin(phase * 0.72) * 0.10),
+      ),
+      radius: size.width * 0.52,
+    );
+    _paintBlob(
+      canvas,
+      size,
+      color: colors[2],
+      center: Offset(
+        size.width * (0.40 + math.sin(phase * 0.66 + 1.4) * 0.13),
+        size.height * (0.93 + math.cos(phase * 0.74) * 0.08),
+      ),
+      radius: size.width * 0.62,
+    );
+  }
+
+  void _paintBlob(
+    Canvas canvas,
+    Size size, {
+    required Color color,
+    required Offset center,
+    required double radius,
+  }) {
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            color.withValues(alpha: 0.82),
+            color.withValues(alpha: 0.28),
+            Colors.transparent,
+          ],
+          stops: const [0, 0.58, 1],
+        ).createShader(Rect.fromCircle(center: center, radius: radius)),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _LiquidBlobPainter oldDelegate) =>
+      oldDelegate.phase != phase || oldDelegate.colors != colors;
+}
+
+/// Draws the broad, curved light ribbons that float through the background.
+/// Their color changes with the album, while their movement stays slow and calm.
+class _SilkRibbonPainter extends CustomPainter {
+  const _SilkRibbonPainter({required this.colors, required this.progress});
+
+  final List<Color> colors;
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final phase = progress * math.pi * 2;
+    _drawRibbon(
+      canvas,
+      size,
+      color: colors[2],
+      y: size.height * (0.04 + math.sin(phase * 0.7) * 0.025),
+      bend: size.height * 0.30,
+      thickness: size.width * 0.22,
+    );
+    _drawRibbon(
+      canvas,
+      size,
+      color: colors[0],
+      y: size.height * (0.50 + math.cos(phase * 0.62) * 0.035),
+      bend: -size.height * 0.24,
+      thickness: size.width * 0.15,
+    );
+    _drawRibbon(
+      canvas,
+      size,
+      color: colors[1],
+      y: size.height * (0.83 + math.sin(phase * 0.56 + 1.2) * 0.03),
+      bend: size.height * 0.16,
+      thickness: size.width * 0.12,
+    );
+  }
+
+  void _drawRibbon(
+    Canvas canvas,
+    Size size, {
+    required Color color,
+    required double y,
+    required double bend,
+    required double thickness,
+  }) {
+    final path = Path()
+      ..moveTo(-size.width * 0.22, y)
+      ..cubicTo(
+        size.width * 0.18,
+        y + bend,
+        size.width * 0.68,
+        y - bend * 0.72,
+        size.width * 1.18,
+        y + bend * 0.44,
+      );
+    final bounds = Offset.zero & size;
+    final softPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = thickness
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 26)
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Colors.transparent,
+          color.withValues(alpha: 0.18),
+          color.withValues(alpha: 0.34),
+          Colors.transparent,
+        ],
+        stops: const [0, 0.30, 0.68, 1],
+      ).createShader(bounds);
+    final highlightPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = thickness * 0.12
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Colors.transparent,
+          color.withValues(alpha: 0.10),
+          Colors.transparent,
+        ],
+      ).createShader(bounds);
+
+    canvas
+      ..drawPath(path, softPaint)
+      ..drawPath(path, highlightPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SilkRibbonPainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.colors != colors;
 }
 
 class _DiscGroovePainter extends CustomPainter {

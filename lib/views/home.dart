@@ -67,7 +67,7 @@ class _HomePageState extends State<HomePage> {
   int _featuredPageIndex = 0;
   int _featuredItemCount = 0;
   int _featuredLoopStartPage = 0;
-  double _scrollOffset = 0;
+  final ValueNotifier<double> _scrollOffset = ValueNotifier(0);
 
   @override
   void initState() {
@@ -96,6 +96,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _featuredAutoPlayTimer?.cancel();
     _featuredPageController?.dispose();
+    _scrollOffset.dispose();
     super.dispose();
   }
 
@@ -151,16 +152,11 @@ class _HomePageState extends State<HomePage> {
     if (notification.metrics.axis != Axis.vertical) return false;
 
     final nextOffset = notification.metrics.pixels.clamp(0.0, 1200.0);
-    if ((nextOffset - _scrollOffset).abs() < 1) return false;
+    if ((nextOffset - _scrollOffset.value).abs() < 1) return false;
 
-    if (!mounted) return false;
-    setState(() {
-      _scrollOffset = nextOffset;
-    });
+    _scrollOffset.value = nextOffset;
     return false;
   }
-
-  double get _backgroundTintProgress => (_scrollOffset / 260).clamp(0.0, 1.0);
 
   @override
   Widget build(BuildContext context) {
@@ -182,18 +178,21 @@ class _HomePageState extends State<HomePage> {
           ),
           Positioned.fill(
             child: IgnorePointer(
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 180),
-                opacity: _backgroundTintProgress,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: const Alignment(0.92, -0.82),
-                      radius: 1.15,
-                      colors: [
-                        const Color(0xFF000000).withValues(alpha: 0.0),
-                        Colors.transparent,
-                      ],
+              child: RepaintBoundary(
+                child: ValueListenableBuilder<double>(
+                  valueListenable: _scrollOffset,
+                  builder: (context, offset, child) => AnimatedOpacity(
+                    duration: const Duration(milliseconds: 180),
+                    opacity: (offset / 260).clamp(0.0, 1.0),
+                    child: child,
+                  ),
+                  child: const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment(0.92, -0.82),
+                        radius: 1.15,
+                        colors: [Color(0x00000000), Colors.transparent],
+                      ),
                     ),
                   ),
                 ),
@@ -621,6 +620,9 @@ class _HomePageState extends State<HomePage> {
           );
         }
 
+        if (snapshot.hasError) {
+          return const SizedBox.shrink();
+        }
         final tracks = snapshot.data ?? const <YouTubePlaylistItem>[];
         if (tracks.isEmpty) {
           return const SizedBox.shrink();
@@ -645,93 +647,104 @@ class _HomePageState extends State<HomePage> {
                 '${tracks.length} songs from YouTube',
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
-              const SizedBox(height: 8),
-              ListView.separated(
-                shrinkWrap: true,
-                primary: false,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: tracks.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final track = tracks[index];
-                  return Material(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(16),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const YouTubePlaylistScreen(),
-                        ),
-                      ),
-                      child: Ink(
-                        height: 72,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.14),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(9),
-                              child: SizedBox(
-                                width: 74,
-                                height: 48,
-                                child: track.thumbnailUrl.isEmpty
-                                    ? const ColoredBox(color: Colors.white12)
-                                    : Image.network(
-                                        track.thumbnailUrl,
-                                        fit: BoxFit.cover,
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    track.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    track.channelTitle,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white60,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.play_circle_fill_rounded,
-                              color: Color(0xFFFF0033),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 212,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 4),
+                  itemCount: tracks.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) =>
+                      _youtubeSongTile(context, tracks[index], index),
+                ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _youtubeSongTile(
+    BuildContext context,
+    YouTubePlaylistItem track,
+    int index,
+  ) {
+    return _PressScale(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => YouTubePlaylistScreen(
+            initialVideoId: track.videoId,
+            initialIndex: index,
+          ),
+        ),
+      ),
+      child: SizedBox(
+        width: 154,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              track.thumbnailUrl.isEmpty
+                  ? const ColoredBox(color: Color(0xFF201016))
+                  : Image.network(track.thumbnailUrl, fit: BoxFit.cover),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0xE6000000)],
+                    stops: [0.30, 1],
+                  ),
+                ),
+              ),
+              const Positioned(
+                top: 10,
+                left: 10,
+                child: CircleAvatar(
+                  radius: 15,
+                  backgroundColor: Color(0xFFFF0033),
+                  child: Icon(Icons.play_arrow_rounded, color: Colors.white),
+                ),
+              ),
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 12,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      track.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      track.channelTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
